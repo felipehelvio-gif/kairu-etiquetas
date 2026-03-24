@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kairu Etiquetas — by Kairu Labs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #101012; --bg2: #18181B; --bg3: #1F1F23;
+            --card: #18181B; --border: #2A2A2F; --border2: #3A3A40;
+            --surface: #18181B; --surface2: #2A2A2F;
+            --text: #F8F8F7; --text2: #B0B0B8; --text3: #62626B;
+            --accent: #FF6B2B; --accent-dark: #E85A1E; --accent-light: #FF8F5A;
+            --accent-bg: rgba(255,107,43,.08);
+            --success: #34C759; --warning: #FF9F0A; --error: #FF453A; --info: #5AC8FA;
+            --radius: 16px;
+            --font-heading: 'Plus Jakarta Sans', sans-serif;
+            --font-body: 'DM Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg); color: var(--text);
+            height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+        .app-layout {
+            display: flex; flex: 1; overflow: hidden;
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 28px; border-bottom: 1px solid rgba(255,255,255,.04);
+            background: rgba(16,16,18,.92); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            -webkit-app-region: drag; user-select: none; flex-shrink: 0;
+        }
+        .header-left { display: flex; align-items: center; gap: 14px; }
+        .logo { font-family: var(--font-heading); font-weight: 800; font-size: 18px; letter-spacing: 2px; }
+        .logo .sub { color: var(--text3); font-weight: 300; font-size: 11px; margin-left: 8px; letter-spacing: 4px; vertical-align: middle; }
+        .badge { padding: 3px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+        .badge-product { background: var(--accent); color: white; text-transform: uppercase; }
+
+        /* ─── SIDEBAR ─── */
+        .sidebar {
+            width: 320px; min-width: 320px;
+            background: rgba(16,16,18,.5); border-right: 1px solid rgba(255,255,255,.04);
+            display: flex; flex-direction: column; overflow-y: auto;
+        }
+        .sidebar-header {
+            padding: 20px; border-bottom: 1px solid rgba(255,255,255,.04);
+        }
+        .sidebar-header .logo-text { font-size: 16px; font-weight: 700; font-family: var(--font-heading); letter-spacing: 2px; display: none; }
+        .sidebar-header .logo-sub { font-size: 11px; color: var(--text2); font-weight: 400; display: flex; align-items: center; gap: 8px; margin-top: 4px; display: none; }
+
+        .sidebar-tabs {
+            display: flex; border-bottom: 1px solid var(--border);
+        }
+        .sidebar-tab {
+            flex: 1; padding: 10px; text-align: center; font-size: 11px;
+            font-weight: 700; color: var(--text2); cursor: pointer;
+            border: none; background: transparent; font-family: inherit;
+            border-bottom: 2px solid transparent; transition: all 0.2s;
+        }
+        .sidebar-tab.active { color: var(--text); border-bottom-color: var(--accent); }
+        .sidebar-tab:hover:not(.active) { color: var(--text); }
+
+        .sidebar-panel { display: none; flex: 1; overflow-y: auto; }
+        .sidebar-panel.active { display: block; }
+
+        .config-section { padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        .config-section h3 {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 3px;
+            color: var(--text2); font-weight: 500; margin-bottom: 12px;
+            font-family: var(--font-body);
+        }
+
+        .logo-area {
+            width: 100%; aspect-ratio: 16/6; border-radius: 12px;
+            border: 2px dashed var(--border); display: flex;
+            align-items: center; justify-content: center; cursor: pointer;
+            transition: all 0.2s; overflow: hidden; position: relative;
+            background: var(--surface2);
+        }
+        .logo-area:hover { border-color: var(--text2); background: #222; }
+        .logo-area img { max-width: 80%; max-height: 80%; object-fit: contain; }
+        .logo-area .placeholder { color: var(--text2); font-size: 12px; font-weight: 600; }
+        .logo-remove {
+            position: absolute; top: 4px; right: 4px; width: 20px; height: 20px;
+            background: rgba(0,0,0,0.7); border: none; color: #fff; border-radius: 50%;
+            cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center;
+        }
+
+        /* Inputs */
+        .field { margin-bottom: 10px; }
+        .field label { display: block; font-size: 11px; font-weight: 600; color: var(--text2); margin-bottom: 4px; }
+        .field input, .field select {
+            width: 100%; padding: 10px 12px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface2);
+            color: var(--text); font-size: 13px; font-family: inherit;
+            outline: none; transition: border-color 0.2s;
+        }
+        .field input:focus, .field select:focus { border-color: #555; }
+        .field input::placeholder { color: #555; }
+        .row { display: flex; gap: 8px; }
+        .row .field { flex: 1; }
+
+        .printer-row { display: flex; gap: 6px; align-items: flex-end; }
+        .printer-row select { flex: 1; }
+        .refresh-btn {
+            width: 38px; height: 38px; border-radius: 10px;
+            border: 1px solid var(--border); background: var(--surface2);
+            color: var(--text2); cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .refresh-btn:hover { border-color: #555; color: var(--text); }
+        .printer-count { font-size: 10px; color: var(--text2); margin-top: 4px; }
+
+        /* ─── PRODUCTS LIST ─── */
+        .product-add-row {
+            display: flex; gap: 6px; margin-bottom: 12px;
+        }
+        .product-add-row input { flex: 1; }
+        .add-btn {
+            padding: 10px 16px; border-radius: 10px; border: none;
+            background: var(--accent); color: #000; font-size: 13px;
+            font-weight: 800; cursor: pointer; font-family: inherit;
+            white-space: nowrap; transition: opacity 0.2s;
+        }
+        .add-btn:hover { opacity: 0.8; }
+
+        .products-list { list-style: none; }
+        .product-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px; border-radius: 10px; cursor: pointer;
+            border: 1px solid transparent; transition: all 0.15s; margin-bottom: 4px;
+        }
+        .product-item:hover { background: var(--surface2); border-color: var(--border); }
+        .product-item.selected { background: rgba(255,255,255,0.05); border-color: #444; }
+        .product-item .name { flex: 1; font-size: 13px; font-weight: 600; }
+        .product-item .days {
+            font-size: 10px; color: var(--text2); white-space: nowrap;
+        }
+        .product-item .delete-btn {
+            width: 24px; height: 24px; border-radius: 6px; border: none;
+            background: transparent; color: #666; font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; opacity: 0;
+        }
+        .product-item:hover .delete-btn { opacity: 1; }
+        .product-item .delete-btn:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+        .product-empty {
+            text-align: center; padding: 20px; color: #444; font-size: 12px;
+        }
+
+        /* Edit product modal inline */
+        .product-edit {
+            background: var(--surface2); border-radius: 12px; padding: 14px;
+            margin-top: 8px; border: 1px solid var(--border);
+        }
+        .product-edit h4 { font-size: 12px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+        .product-edit .save-edit-btn {
+            width: 100%; padding: 8px; border-radius: 8px; border: none;
+            background: var(--accent); color: #000; font-size: 12px;
+            font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 8px;
+        }
+
+        /* ─── MAIN ─── */
+        .main { flex: 1; display: flex; flex-direction: column; padding: 28px 32px; overflow-y: auto; }
+        .main-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .main-header h2 { font-size: 24px; font-weight: 800; font-family: var(--font-heading); letter-spacing: -0.5px; }
+
+        /* Toggle buttons */
+        .toggle-group {
+            display: flex; background: var(--surface); border-radius: 10px;
+            padding: 3px; gap: 3px; border: 1px solid var(--border);
+        }
+        .toggle-btn {
+            padding: 6px 14px; border-radius: 8px; border: none;
+            font-size: 11px; font-weight: 700; cursor: pointer;
+            transition: all 0.2s; background: transparent; color: var(--text2); font-family: inherit;
+        }
+        .toggle-btn.active { background: var(--accent); color: #fff; }
+        .toggle-btn:hover:not(.active) { color: var(--text); }
+
+        /* Form */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .form-grid .full { grid-column: 1 / -1; }
+        .form-input {
+            padding: 12px 14px; border-radius: 12px;
+            border: 1px solid var(--border); background: var(--surface);
+            color: var(--text); font-size: 14px; font-family: inherit;
+            outline: none; width: 100%; transition: border-color 0.2s;
+        }
+        .form-input:focus { border-color: #555; }
+        .form-input::placeholder { color: #444; }
+        .form-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text2); font-weight: 700; margin-bottom: 5px; display: block; }
+
+        /* Product selector in form */
+        .product-selector {
+            display: flex; gap: 8px; flex-wrap: wrap;
+        }
+        .product-chip {
+            padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text2); font-size: 12px;
+            font-weight: 600; cursor: pointer; transition: all 0.2s; font-family: inherit;
+        }
+        .product-chip:hover { border-color: #555; color: var(--text); }
+        .product-chip.active { background: var(--accent); color: #000; border-color: var(--accent); }
+
+        /* Conservation toggle */
+        .conserv-toggle { display: flex; gap: 8px; }
+        .conserv-btn {
+            flex: 1; padding: 10px; border-radius: 12px;
+            border: 2px solid var(--border); background: transparent;
+            color: var(--text2); font-size: 13px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; font-family: inherit;
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+        }
+        .conserv-btn.active-refri { border-color: #f59e0b; color: #f59e0b; background: rgba(245,158,11,0.08); }
+        .conserv-btn.active-conge { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.08); }
+
+        /* Actions */
+        .actions-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+        .copies-group {
+            display: flex; align-items: center; gap: 2px;
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+        }
+        .copies-btn {
+            width: 40px; height: 40px; border: none; background: transparent;
+            color: var(--text2); font-size: 18px; cursor: pointer; border-radius: 12px;
+            font-family: inherit; transition: background 0.2s;
+        }
+        .copies-btn:hover { background: var(--surface2); color: var(--text); }
+        .copies-val { width: 32px; text-align: center; font-size: 15px; font-weight: 800; color: var(--text); }
+
+        .print-btn {
+            flex: 1; padding: 14px; border-radius: 10px; border: none;
+            background: var(--accent); color: #fff; font-size: 14px;
+            font-weight: 700; cursor: pointer; font-family: var(--font-body);
+            transition: all 0.25s; display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .print-btn:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 8px 24px rgba(255,107,43,.15); }
+        .print-btn:active { transform: translateY(0); }
+        .print-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .save-btn {
+            padding: 14px 20px; border-radius: 10px; border: 1px solid var(--border);
+            background: transparent; color: var(--text2); font-size: 13px;
+            font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.25s;
+        }
+        .save-btn:hover { border-color: var(--accent); color: var(--text); }
+
+        /* Preview */
+        .preview-container {
+            margin-top: 24px; background: var(--bg2); border-radius: var(--radius);
+            padding: 20px 24px; border: 1px solid var(--border);
+        }
+        .preview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .preview-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text2); font-weight: 700; }
+        .preview-toggles { display: flex; gap: 8px; }
+
+        .etiqueta {
+            background: #fff; border-radius: 14px; padding: 16px 18px;
+            max-width: 420px; margin: 0 auto; font-family: 'Courier New', monospace;
+            color: #000; display: flex; flex-direction: column; justify-content: space-between;
+            transition: all 0.3s;
+        }
+        .etiqueta.s60x60 { aspect-ratio: 1/1; }
+        .etiqueta.s60x40 { aspect-ratio: 60/40; }
+        .etq-nome { font-weight: 900; line-height: 1; letter-spacing: -0.5px; }
+        .etq-nome.big { font-size: 32px; } .etq-nome.small { font-size: 26px; }
+        .etq-conserv { display: flex; justify-content: space-between; align-items: center; font-weight: 900; margin-top: 6px; }
+        .etq-conserv.big { font-size: 18px; } .etq-conserv.small { font-size: 15px; }
+        .etq-conserv .icon { margin-right: 4px; }
+        .etq-sep { border-top: 3px solid #000; margin: 6px 0; }
+        .etq-sep-thin { border-top: 1px solid #000; margin: 5px 0; }
+        .etq-row { display: flex; justify-content: space-between; font-weight: 700; }
+        .etq-row .val { font-weight: 900; }
+        .etq-row.big { font-size: 20px; } .etq-row.small { font-size: 15px; }
+        .etq-resp { font-weight: 900; }
+        .etq-resp.big { font-size: 20px; } .etq-resp.small { font-size: 15px; }
+        .etq-lote { font-weight: 700; }
+        .etq-lote.big { font-size: 15px; } .etq-lote.small { font-size: 12px; }
+        .etq-footer { display: flex; justify-content: space-between; align-items: center; }
+        .etq-footer-info { line-height: 1.3; }
+        .etq-footer-info .empresa { font-weight: 900; }
+        .etq-footer-info .cnpj { font-weight: 700; }
+        .etq-footer-info.big { font-size: 12px; } .etq-footer-info.small { font-size: 10px; }
+        .etq-footer img { object-fit: contain; border-radius: 2px; }
+        .etq-footer img.big { max-height: 70px; max-width: 120px; }
+        .etq-footer img.small { max-height: 50px; max-width: 90px; }
+
+        /* Validity info badge */
+        .validity-badge {
+            font-size: 11px; padding: 6px 12px; border-radius: 8px;
+            background: rgba(34,197,94,0.1); color: #22c55e; font-weight: 700;
+            text-align: center; margin-top: 4px;
+        }
+        .validity-badge.warn { background: rgba(245,158,11,0.1); color: #f59e0b; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; padding: 14px 20px;
+            border-radius: 12px; font-size: 13px; font-weight: 600;
+            z-index: 999; transition: all 0.3s; opacity: 0;
+            transform: translateY(10px); font-family: inherit;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .toast.success { background: #22c55e; color: #000; }
+        .toast.error { background: #ef4444; color: #fff; }
+        .toast.info { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 8px; }
+        /* Kairu Banner */
+        .kairu-banner {
+            display: none; width: 100%;
+            padding: 18px 44px 18px 24px; z-index: 100;
+            font-size: 15px; font-weight: 700; text-align: center;
+            cursor: pointer; transition: opacity 0.3s;
+            position: relative; flex-shrink: 0;
+            letter-spacing: 0.3px;
+        }
+        .kairu-banner:hover { opacity: 0.9; }
+        .kairu-banner .close-banner {
+            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+            background: rgba(0,0,0,0.3); border: none; color: #fff; width: 20px; height: 20px;
+            border-radius: 50%; cursor: pointer; font-size: 11px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .version { font-size: 10px; color: var(--text2); text-align: center; padding: 12px; font-family: var(--font-body); letter-spacing: 0.3px; }
+
+        /* ─── LIGHT MODE ─── */
+        body.light {
+            --bg: #FAFAF9; --surface: #F0F0EE; --surface2: #E5E5E3;
+            --border: #E5E5E3; --text: #1A1A1D; --text2: #62626B;
+        }
+        body.light .sidebar { background: #F5F5F5; border-right-color: #E5E5E5; }
+        body.light .main { background: #FFFFFF; }
+        body.light .form-input { background: #F5F5F5; border-color: #E5E5E5; color: #0A0A0A; }
+        body.light .form-input:focus { border-color: var(--accent); }
+        body.light .toggle-group { background: #F5F5F5; border-color: #E5E5E5; }
+        body.light .preview-container { background: #F5F5F5; border-color: #E5E5E5; }
+        body.light .product-card { background: #FFFFFF; border-color: #E5E5E5; }
+        body.light .product-card:hover { border-color: var(--accent); }
+        body.light .config-section { border-bottom-color: #E5E5E5; }
+        body.light .version { color: #AAAAAA; }
+        body.light .save-btn { border-color: #E5E5E5; color: #666; }
+        body.light .save-btn:hover { border-color: #333; color: #0A0A0A; }
+        body.light .sidebar-tab { color: #666; }
+        body.light .sidebar-tab.active { color: #0A0A0A; }
+        body.light .logo-area { background: #FFFFFF; border-color: #E5E5E5; }
+        body.light .copies-btn { background: #F5F5F5; border-color: #E5E5E5; color: #0A0A0A; }
+        body.light .printer-row select { background: #F5F5F5; border-color: #E5E5E5; color: #0A0A0A; }
+
+        /* Toggle aparencia */
+        .theme-toggle {
+            display: flex; gap: 8px; margin-top: 8px;
+        }
+        .theme-btn {
+            flex: 1; padding: 10px; border-radius: 10px; border: 2px solid var(--border);
+            background: transparent; color: var(--text2); font-size: 13px;
+            font-weight: 600; cursor: pointer; font-family: var(--font-heading);
+            transition: all 0.2s; text-align: center;
+        }
+        .theme-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+    </style>
+</head>
+<body>
+
+<!-- Banner remoto Kairu Labs (controlado pelo servidor) -->
+<div class="kairu-banner" id="kairuBanner" style="display:block; background:linear-gradient(135deg, var(--accent), var(--accent-dark)); color:#fff; font-family:var(--font-heading);">
+    📢 Anuncio aqui
+</div>
+
+<header class="header">
+    <div class="header-left">
+        <div class="logo"><span class="k">K</span>AIRU<span class="sub">LABS</span></div>
+        <span class="badge badge-product">ETIQUETAS</span>
+    </div>
+    <div class="header-right">
+    </div>
+</header>
+
+<div class="app-layout">
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+
+    <div class="sidebar-tabs">
+        <button class="sidebar-tab active" onclick="switchTab('produtos')">📦 Produtos</button>
+        <button class="sidebar-tab" onclick="switchTab('config')">⚙️ Configurações</button>
+    </div>
+
+    <!-- TAB: Produtos -->
+    <div class="sidebar-panel active" id="panelProdutos">
+        <div class="config-section" style="border-bottom: none;">
+            <h3>Cadastro de Produtos</h3>
+            <div class="product-add-row">
+                <input type="text" id="newProductName" placeholder="Nome do produto" class="field"
+                    style="padding:10px 12px; border-radius:10px; border:1px solid var(--border); background:var(--surface2); color:var(--text); font-size:13px; font-family:inherit; outline:none;"
+                    onkeydown="if(event.key==='Enter') addProduct()">
+                <button class="add-btn" onclick="addProduct()">+ Adicionar</button>
+            </div>
+            <ul class="products-list" id="productsList"></ul>
+
+            <!-- Edit form (hidden by default) -->
+            <div class="product-edit" id="productEdit" style="display:none">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                    <h4 id="editTitle" style="margin:0">Editando: ...</h4>
+                    <button onclick="closeProductEdit()" style="background:none; border:none; color:var(--text2); cursor:pointer; font-size:16px" title="Recolher">▲</button>
+                </div>
+                <div class="row">
+                    <div class="field">
+                        <label>🌡️ Resfriado (dias)</label>
+                        <input type="number" id="editRefriDays" min="0" value="3" placeholder="3">
+                    </div>
+                    <div class="field">
+                        <label>❄️ Congelado (dias)</label>
+                        <input type="number" id="editCongeDays" min="0" value="30" placeholder="30">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Unidade padrão</label>
+                    <select id="editUnit">
+                        <option value="KG">KG</option><option value="UN">UN</option>
+                        <option value="G">G</option><option value="L">L</option><option value="ML">ML</option>
+                    </select>
+                </div>
+                <button class="save-edit-btn" onclick="saveProductEdit()">✅ Salvar</button>
+            </div>
+        </div>
+
+        <!-- XLSX Import/Export -->
+        <div style="margin-top:12px; padding:12px; background:var(--surface); border-radius:12px; border:1px solid var(--border)">
+            <div style="font-size:11px; text-transform:uppercase; letter-spacing:2px; color:var(--text2); margin-bottom:8px; font-weight:600">📄 Importar Planilha</div>
+            <div style="display:flex; gap:6px">
+                <button id="xlsxImportBtn" onclick="document.getElementById('xlsxInput').click()" style="flex:1; padding:10px; border-radius:10px; border:1px solid var(--accent); background:var(--accent-bg); color:var(--accent); font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-heading)">📥 Importar XLSX</button>
+                <button onclick="downloadTemplate()" style="flex:1; padding:10px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--text2); font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font-heading)">📋 Baixar Modelo</button>
+            </div>
+            <input type="file" id="xlsxInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleXLSXImport(event)">
+            <div style="font-size:10px; color:var(--text2); margin-top:6px">Preencha o modelo e importe. Produtos existentes não serão duplicados.</div>
+        </div>
+    </div>
+
+    <!-- TAB: Config -->
+    <div class="sidebar-panel" id="panelConfig">
+        <div class="config-section">
+            <h3>Logo da Empresa</h3>
+            <div class="logo-area" id="logoArea" onclick="selectLogo()">
+                <span class="placeholder" id="logoPlaceholder">Clique para selecionar logo</span>
+                <img id="logoImg" style="display:none" />
+                <button class="logo-remove" id="logoRemove" style="display:none" onclick="event.stopPropagation(); removeLogo()">✕</button>
+            </div>
+        </div>
+        <div class="config-section">
+            <h3>Dados da Empresa</h3>
+            <div class="field">
+                <label>Nome da Empresa / Rede</label>
+                <input type="text" id="cfgNome" placeholder="Ex: A Casa da Severina" oninput="updatePreview(); autoSaveConfig()">
+            </div>
+            <div class="field">
+                <label>CNPJ</label>
+                <input type="text" id="cfgCnpj" placeholder="00.000.000/0000-00" oninput="formatCnpj(this); updatePreview(); autoSaveConfig()">
+            </div>
+        </div>
+        <div class="config-section">
+            <h3>🖨️ Impressora (USB)</h3>
+            <div class="field">
+                <label>Selecione a impressora Zebra</label>
+                <div class="printer-row">
+                    <select id="cfgPrinter" onchange="autoSaveConfig()">
+                        <option value="">Carregando...</option>
+                    </select>
+                    <button class="refresh-btn" onclick="refreshPrinters()" title="Atualizar lista">🔄</button>
+                </div>
+                <div class="printer-count" id="printerCount"></div>
+            </div>
+        </div>
+        <!-- Rede Local -->
+        <div class="config-section">
+            <h3>📱 Acesso via Rede Local</h3>
+            <div id="networkInfo" style="font-size:12px; color:var(--text2); line-height:1.6">
+                Carregando...
+            </div>
+        </div>
+
+        <!-- Aparência -->
+        <div class="config-section" id="licenseSection">
+            <h3>🔑 Plano &amp; Licença</h3>
+            <div id="licenseStatus" style="margin-bottom:10px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:700; font-family:var(--font-heading); text-align:center"></div>
+            <div id="licensePlans" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px">
+                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:11px">
+                    <span style="font-weight:800; color:var(--text)">FREE</span>
+                    <span style="color:var(--text2); flex:1">Banner · Cadastro manual</span>
+                    <span style="color:var(--success); font-weight:700">Grátis</span>
+                </div>
+                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--accent); background:var(--accent-bg); font-size:11px">
+                    <span style="font-weight:800; color:var(--accent)">PRO</span>
+                    <span style="color:var(--text2); flex:1">Sem ads · Import XLSX</span>
+                    <span style="color:var(--accent); font-weight:700">R$ 199,90</span>
+                </div>
+                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--info); background:rgba(90,200,250,0.06); font-size:11px">
+                    <span style="font-weight:800; color:var(--info)">BUSINESS</span>
+                    <span style="color:var(--text2); flex:1">+ Matriz/Filial</span>
+                    <span style="color:var(--info); font-weight:700">R$ 497,00</span>
+                </div>
+            </div>
+            <div style="display:flex; gap:6px" id="licenseInputRow">
+                <input type="text" id="licenseKey" placeholder="KAIRU-XXXX-XXXX-XXXX" class="config-input" style="text-transform:uppercase; font-family:var(--font-mono); letter-spacing:1px; font-size:13px" oninput="formatLicenseKey(this)">
+                <button onclick="activateLicense()" style="padding:10px 16px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-weight:700; cursor:pointer; font-family:var(--font-heading); font-size:12px; white-space:nowrap">Ativar</button>
+            </div>
+            <div style="font-size:10px; color:var(--text2); margin-top:6px">Licença vitalícia (v1.x) · Pagamento único · <a href="https://kairulabs.ai" target="_blank" style="color:var(--accent)">Comprar em kairulabs.ai</a></div>
+        </div>
+        <div class="config-section">
+            <h3>🎨 Aparência</h3>
+            <div class="theme-toggle">
+                <button class="theme-btn active" id="btnDark" onclick="setTheme('dark')">🌙 Dark</button>
+                <button class="theme-btn" id="btnLight" onclick="setTheme('light')">☀️ Light</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ad Sidebar (300x250 Medium Rectangle) -->
+    <div id="sidebarAd" class="sidebar-ad" style="margin:auto 16px 12px; display:flex;">
+        <div style="width:100%; min-height:200px; border-radius:14px; border:1px dashed var(--border); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px; padding:16px; background:rgba(24,24,27,.6);">
+            <span style="font-size:32px">📢</span>
+            <span style="font-size:11px; color:var(--text2); font-weight:600; text-transform:uppercase; letter-spacing:2px">Espaço publicitário</span>
+            <span style="font-size:10px; color:var(--text3)">Anuncie aqui · ads.kairulabs.ai</span>
+        </div>
+    </div>
+
+    <div class="version"><span style="color:var(--accent); font-weight:700; font-family:var(--font-heading); letter-spacing:2px">KAIRU</span> <span style="color:var(--text2); font-weight:300; letter-spacing:3px; font-size:9px">LABS</span> · Inteligência que opera.</div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+    <div class="main-header">
+        <h2>Nova Etiqueta</h2>
+    </div>
+
+    <div class="form-grid">
+        <!-- Product selector -->
+        <div class="full">
+            <label class="form-label">Produto *</label>
+            <select class="form-input" id="produtoSelect" onchange="onProductSelect()">
+                <option value="">Selecione ou digite abaixo...</option>
+            </select>
+        </div>
+        <div class="full">
+            <label class="form-label">Ou digite o nome manualmente</label>
+            <input type="text" class="form-input" id="nomeProduto" placeholder="Ex: Bolinho de Carne" oninput="updatePreview()">
+        </div>
+        <div class="full">
+            <label class="form-label">Conservação</label>
+            <div class="conserv-toggle">
+                <button class="conserv-btn active-refri" id="btnRefri" onclick="setConserv('REFRIGERADO')">🌡️ Resfriado</button>
+                <button class="conserv-btn" id="btnConge" onclick="setConserv('CONGELADO')">❄️ Congelado</button>
+            </div>
+        </div>
+        <div>
+            <label class="form-label">Quantidade</label>
+            <input type="number" step="0.01" class="form-input" id="quantidade" placeholder="2.5" oninput="updatePreview()">
+        </div>
+        <div>
+            <label class="form-label">Unidade</label>
+            <select class="form-input" id="unidade" onchange="updatePreview()">
+                <option value="KG">KG</option><option value="UN">UN</option>
+                <option value="G">G</option><option value="L">L</option><option value="ML">ML</option>
+            </select>
+        </div>
+        <div>
+            <label class="form-label">Validade (dias)</label>
+            <input type="number" class="form-input" id="validadeDias" placeholder="3" value="3" min="0" oninput="updatePreview()">
+        </div>
+        <div>
+            <label class="form-label">Lote / SIF (opcional)</label>
+            <input type="text" class="form-input" id="lote" placeholder="SIF 1234" oninput="updatePreview()">
+        </div>
+        <div class="full">
+            <label class="form-label">Responsável *</label>
+            <input type="text" class="form-input" id="responsavel" placeholder="Quem manipulou" oninput="updatePreview()">
+        </div>
+        <div class="full" id="validityBadge" style="display:none"></div>
+    </div>
+
+    <div class="actions-row">
+        <div class="copies-group">
+            <button class="copies-btn" onclick="changeCopies(-1)">−</button>
+            <span class="copies-val" id="copiesVal">1</span>
+            <button class="copies-btn" onclick="changeCopies(1)">+</button>
+        </div>
+        <button class="print-btn" onclick="handlePrint()">🖨️ Imprimir</button>
+        <button class="save-btn" onclick="handleSaveFile()">💾 Salvar ZPL</button>
+    </div>
+
+    <div class="preview-container">
+        <div class="preview-header">
+            <span class="preview-label" id="previewLabel">Preview 60×60mm</span>
+            <div class="preview-toggles">
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="toggleHora" onclick="toggleHora()">⏰ Hora</button>
+                </div>
+                <div class="toggle-group">
+                    <button class="toggle-btn" id="toggle60x40" onclick="setSize('60x40')">60×40</button>
+                    <button class="toggle-btn active" id="toggle60x60" onclick="setSize('60x60')">60×60</button>
+                </div>
+            </div>
+        </div>
+        <div class="etiqueta s60x60" id="etiqueta"></div>
+    </div>
+</main>
+</div><!-- /app-layout -->
+
+<div class="toast" id="toast"></div>
+
+<script src="zpl-generator.js"></script>
+<script>
+// ═══ STATE ═══
+let state = {
+    conservacao: "REFRIGERADO", copies: 1, labelSize: "60x60", showTime: true,
+    printers: [], products: [], editingProductIdx: -1,
+    config: { nomeEmpresa: "", cnpj: "", logoBase64: "", printerName: "" },
+    licenseTier: "free" // "free" | "pro" | "business"
+}
+let saveTimeout = null
+
+// ═══ LICENSE ═══
+function formatLicenseKey(el) {
+    let v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, "")
+    if (v.length > 5 && !v.startsWith("KAIRU")) v = "KAIRU" + v.slice(5)
+    let parts = []
+    if (v.length > 0) parts.push(v.slice(0, 5))
+    if (v.length > 5) parts.push(v.slice(5, 9))
+    if (v.length > 9) parts.push(v.slice(9, 13))
+    if (v.length > 13) parts.push(v.slice(13, 17))
+    el.value = parts.join("-")
+}
+
+function validateLicenseKey(key) {
+    const clean = key.replace(/-/g, "").toUpperCase()
+    return clean.length === 17 && clean.startsWith("KAIRU")
+}
+
+function detectTierFromKey(key) {
+    // Prefixo da chave determina o tier
+    const seg = key.replace(/-/g, "").toUpperCase().slice(5, 7)
+    if (seg.startsWith("BZ") || seg.startsWith("BU")) return "business"
+    return "pro" // Padrão para chaves PRO
+}
+
+async function activateLicense() {
+    const key = document.getElementById("licenseKey").value.trim().toUpperCase()
+    if (!key || key.length < 19) {
+        showToast("Digite uma chave válida: KAIRU-XXXX-XXXX-XXXX", "error"); return
+    }
+    if (!validateLicenseKey(key)) {
+        showToast("Chave inválida", "error"); return
+    }
+    let tier = detectTierFromKey(key)
+    // Tentar validar via Portal API
+    try {
+        const r = await fetch("https://portal.kairulabs.ai/api/license/validate", {
+            method: "POST", headers: {"Content-Type":"application/json"},
+            body: JSON.stringify({ key, app: "etiquetas" })
+        })
+        if (r.ok) {
+            const data = await r.json()
+            if (!data.valid) { showToast("Chave não encontrada ou já usada", "error"); return }
+            if (data.tier) tier = data.tier
+        }
+    } catch(e) {
+        console.log("Portal offline, validação offline")
+    }
+    state.licenseTier = tier
+    state.config.licenseKey = key
+    state.config.licenseTier = tier
+    autoSaveConfig()
+    updateLicenseUI()
+    updateProFeatures()
+    const names = { pro: "PRO", business: "BUSINESS" }
+    showToast(`🎉 Licença ${names[tier]} ativada com sucesso!`, "success")
+}
+
+function updateLicenseUI() {
+    const el = document.getElementById("licenseStatus")
+    const inputRow = document.getElementById("licenseInputRow")
+    const plans = document.getElementById("licensePlans")
+    const tier = state.licenseTier
+    if (tier === "business") {
+        el.innerHTML = "✅ <strong>BUSINESS</strong> — Completo"
+        el.style.background = "rgba(90,200,250,0.1)"
+        el.style.color = "var(--info)"
+        el.style.border = "1px solid rgba(90,200,250,0.3)"
+        inputRow.style.display = "none"
+        plans.style.display = "none"
+    } else if (tier === "pro") {
+        el.innerHTML = "✅ <strong>PRO</strong> — Sem anúncios + XLSX"
+        el.style.background = "rgba(52,199,89,0.1)"
+        el.style.color = "var(--success)"
+        el.style.border = "1px solid rgba(52,199,89,0.3)"
+        inputRow.style.display = "none"
+        plans.style.display = "none"
+    } else {
+        el.innerHTML = "📦 <strong>FREE</strong> — Versão gratuita"
+        el.style.background = "rgba(255,107,43,0.06)"
+        el.style.color = "var(--text2)"
+        el.style.border = "1px solid var(--border)"
+        inputRow.style.display = "flex"
+        plans.style.display = "flex"
+    }
+}
+
+function updateProFeatures() {
+    const tier = state.licenseTier
+    const isPaid = tier === "pro" || tier === "business"
+    // Banner: esconder se pago
+    const banner = document.getElementById("kairuBanner")
+    if (banner) banner.style.display = isPaid ? "none" : "block"
+    // XLSX: lock/unlock
+    const xlsxBtn = document.getElementById("xlsxImportBtn")
+    if (xlsxBtn) {
+        if (isPaid) {
+            xlsxBtn.style.opacity = "1"
+            xlsxBtn.style.pointerEvents = "auto"
+            xlsxBtn.innerHTML = "📥 Importar XLSX"
+            xlsxBtn.style.borderColor = "var(--accent)"
+            xlsxBtn.style.color = "var(--accent)"
+        } else {
+            xlsxBtn.style.opacity = "0.5"
+            xlsxBtn.style.pointerEvents = "none"
+            xlsxBtn.innerHTML = "🔒 Pro"
+            xlsxBtn.style.borderColor = "var(--border)"
+            xlsxBtn.style.color = "var(--text2)"
+        }
+    }
+    // Ad sidebar: esconder se pago
+    const sidebarAd = document.getElementById("sidebarAd")
+    if (sidebarAd) sidebarAd.style.display = isPaid ? "none" : "flex"
+}
+
+// ═══ INIT ═══
+async function init() {
+    if (window.api) {
+        const cfg = await window.api.loadConfig()
+        if (cfg) {
+            state.config = { ...state.config, ...cfg }
+            if (cfg.products) state.products = cfg.products
+            document.getElementById("cfgNome").value = cfg.nomeEmpresa || ""
+            document.getElementById("cfgCnpj").value = cfg.cnpj || ""
+            if (cfg.labelSize) { state.labelSize = cfg.labelSize; syncSizeToggle() }
+            if (cfg.showTime !== undefined) { state.showTime = cfg.showTime; syncHoraToggle() }
+            if (cfg.logoBase64) {
+                document.getElementById("logoImg").src = cfg.logoBase64
+                document.getElementById("logoImg").style.display = "block"
+                document.getElementById("logoPlaceholder").style.display = "none"
+                document.getElementById("logoRemove").style.display = "flex"
+            }
+        }
+        await refreshPrinters()
+    }
+    renderProducts()
+    syncProductSelect()
+    updatePreview()
+    // Restaurar licença
+    if (state.config.licenseKey) {
+        state.licenseTier = state.config.licenseTier || "pro"
+        document.getElementById("licenseKey").value = state.config.licenseKey
+    }
+    updateLicenseUI()
+    updateProFeatures()
+}
+
+// ═══ TABS ═══
+function switchTab(tab) {
+    document.querySelectorAll(".sidebar-tab").forEach((el, i) => {
+        el.className = "sidebar-tab" + (i === (tab === "produtos" ? 0 : 1) ? " active" : "")
+    })
+    document.getElementById("panelProdutos").className = "sidebar-panel" + (tab === "produtos" ? " active" : "")
+    document.getElementById("panelConfig").className = "sidebar-panel" + (tab === "config" ? " active" : "")
+}
+
+// ═══ PRODUCTS ═══
+function addProduct() {
+    const input = document.getElementById("newProductName")
+    const name = input.value.trim()
+    if (!name) return showToast("Digite o nome do produto", "error")
+    if (state.products.find(p => p.name.toLowerCase() === name.toLowerCase()))
+        return showToast("Produto já existe", "error")
+    state.products.push({ name, refrigDays: 3, congelDays: 30, unit: "KG" })
+    input.value = ""
+    renderProducts()
+    syncProductSelect()
+    autoSaveConfig()
+    showToast(`"${name}" adicionado!`, "success")
+}
+
+function renderProducts() {
+    const list = document.getElementById("productsList")
+    if (state.products.length === 0) {
+        list.innerHTML = '<div class="product-empty">Nenhum produto cadastrado.<br>Adicione acima para começar.</div>'
+        return
+    }
+    list.innerHTML = state.products.map((p, i) => `
+        <li class="product-item ${state.editingProductIdx === i ? 'selected' : ''}" onclick="editProduct(${i})">
+            <span class="name">${p.name}</span>
+            <span class="days">🌡️${p.refrigDays}d &nbsp;❄️${p.congelDays}d</span>
+            <button class="delete-btn" onclick="event.stopPropagation(); deleteProduct(${i})" title="Excluir">✕</button>
+        </li>
+    `).join("")
+}
+
+function editProduct(idx) {
+    state.editingProductIdx = idx
+    const p = state.products[idx]
+    document.getElementById("editTitle").textContent = `Editando: ${p.name}`
+    document.getElementById("editRefriDays").value = p.refrigDays
+    document.getElementById("editCongeDays").value = p.congelDays
+    document.getElementById("editUnit").value = p.unit || "KG"
+    document.getElementById("productEdit").style.display = "block"
+    renderProducts()
+}
+
+function saveProductEdit() {
+    const idx = state.editingProductIdx
+    if (idx < 0) return
+    state.products[idx].refrigDays = parseInt(document.getElementById("editRefriDays").value) || 0
+    state.products[idx].congelDays = parseInt(document.getElementById("editCongeDays").value) || 0
+    state.products[idx].unit = document.getElementById("editUnit").value
+    closeProductEdit()
+    renderProducts()
+    syncProductSelect()
+    autoSaveConfig()
+    showToast("Produto atualizado!", "success")
+    onProductSelect()
+}
+
+function closeProductEdit() {
+    state.editingProductIdx = -1
+    document.getElementById("productEdit").style.display = "none"
+    renderProducts()
+}
+
+function deleteProduct(idx) {
+    const name = state.products[idx].name
+    state.products.splice(idx, 1)
+    if (state.editingProductIdx === idx) {
+        state.editingProductIdx = -1
+        document.getElementById("productEdit").style.display = "none"
+    }
+    renderProducts()
+    syncProductSelect()
+    autoSaveConfig()
+    showToast(`"${name}" removido`, "info")
+}
+
+// ═══ XLSX IMPORT/EXPORT ═══
+function downloadTemplate() {
+    const wb = XLSX.utils.book_new()
+    const data = [
+        ["Nome", "Unidade", "Dias Resfriado", "Dias Congelado"],
+        ["Coxinha", "UN", 3, 30],
+        ["Frango Desfiado", "KG", 3, 30],
+        ["Bolo de Chocolate", "UN", 5, 60],
+    ]
+    const ws = XLSX.utils.aoa_to_sheet(data)
+    ws["!cols"] = [{ wch: 25 }, { wch: 10 }, { wch: 16 }, { wch: 16 }]
+    XLSX.utils.book_append_sheet(wb, ws, "Produtos")
+    XLSX.writeFile(wb, "modelo_produtos_kairu.xlsx")
+    showToast("Modelo baixado! Preencha e importe.", "success")
+}
+
+function handleXLSXImport(event) {
+    const file = event.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (e) => {
+        try {
+            const wb = XLSX.read(e.target.result, { type: "array" })
+            const ws = wb.Sheets[wb.SheetNames[0]]
+            const rows = XLSX.utils.sheet_to_json(ws)
+            if (!rows.length) { showToast("Planilha vazia!", "error"); return }
+            let added = 0, skipped = 0
+            rows.forEach(row => {
+                // Normalizar nomes de colunas (case insensitive)
+                const keys = Object.keys(row)
+                const get = (patterns) => {
+                    const k = keys.find(k => patterns.some(p => k.toLowerCase().includes(p)))
+                    return k ? row[k] : undefined
+                }
+                const name = get(["nome", "produto", "name", "item"])
+                if (!name || typeof name !== "string" || !name.trim()) return
+                // Checar duplicata
+                if (state.products.some(p => p.name.toLowerCase() === name.trim().toLowerCase())) {
+                    skipped++; return
+                }
+                const unit = get(["unidade", "unit", "un"]) || "KG"
+                const refrigDays = parseInt(get(["resfri", "refrig", "resf", "frio"])) || 3
+                const congelDays = parseInt(get(["congel", "freez", "cong"])) || 30
+                state.products.push({ name: name.trim(), unit: String(unit).toUpperCase(), refrigDays, congelDays })
+                added++
+            })
+            renderProducts(); syncProductSelect(); autoSaveConfig()
+            showToast(`${added} produto${added>1?"s":""} importado${added>1?"s":""}${skipped ? `, ${skipped} já existente${skipped>1?"s":""}` : ""}`, "success")
+        } catch(err) {
+            showToast("Erro ao ler planilha: " + err.message, "error")
+        }
+    }
+    reader.readAsArrayBuffer(file)
+    event.target.value = "" // resetar pra permitir re-import
+}
+
+function syncProductSelect() {
+    const sel = document.getElementById("produtoSelect")
+    const val = sel.value
+    sel.innerHTML = '<option value="">Selecione um produto...</option>'
+    state.products.forEach((p, i) => {
+        const opt = document.createElement("option")
+        opt.value = i
+        opt.textContent = `${p.name} (🌡️${p.refrigDays}d  ❄️${p.congelDays}d)`
+        sel.appendChild(opt)
+    })
+    sel.value = val
+}
+
+function onProductSelect() {
+    const sel = document.getElementById("produtoSelect")
+    const idx = parseInt(sel.value)
+    if (isNaN(idx) || !state.products[idx]) return
+    const p = state.products[idx]
+    document.getElementById("nomeProduto").value = p.name
+    document.getElementById("unidade").value = p.unit || "KG"
+    const dias = state.conservacao === "CONGELADO" ? p.congelDays : p.refrigDays
+    document.getElementById("validadeDias").value = dias
+
+    // Show validity badge
+    const badge = document.getElementById("validityBadge")
+    badge.style.display = "block"
+    badge.innerHTML = `<div class="validity-badge">🌡️ Resfriado: ${p.refrigDays} dias &nbsp;&nbsp;|&nbsp;&nbsp; ❄️ Congelado: ${p.congelDays} dias</div>`
+
+    updatePreview()
+}
+
+// ═══ PRINTERS ═══
+async function refreshPrinters() {
+    if (!window.api) return
+    state.printers = await window.api.listPrinters()
+    const select = document.getElementById("cfgPrinter")
+    select.innerHTML = ""
+    if (state.printers.length === 0) {
+        select.innerHTML = '<option value="">Nenhuma impressora encontrada</option>'
+    } else {
+        select.innerHTML = '<option value="">Selecione...</option>'
+        state.printers.forEach(p => {
+            const opt = document.createElement("option")
+            opt.value = p.name
+            opt.textContent = p.displayName + (p.isDefault ? " ⭐" : "")
+            if (state.config.printerName && p.name === state.config.printerName) opt.selected = true
+            select.appendChild(opt)
+        })
+    }
+    document.getElementById("printerCount").textContent = `${state.printers.length} impressora${state.printers.length !== 1 ? "s" : ""}`
+}
+
+
+// ═══ CONFIG ═══
+function autoSaveConfig() {
+    clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(async () => {
+        state.config.nomeEmpresa = document.getElementById("cfgNome").value
+        state.config.cnpj = document.getElementById("cfgCnpj").value
+        state.config.printerName = document.getElementById("cfgPrinter").value
+        state.config.labelSize = state.labelSize
+        state.config.showTime = state.showTime
+        state.config.products = state.products
+        state.config.theme = localStorage.getItem('kairu-theme') || 'dark'
+        if (window.api) await window.api.saveConfig(state.config)
+    }, 500)
+}
+
+async function selectLogo() {
+    if (!window.api) return
+    const base64 = await window.api.selectLogo()
+    if (base64) {
+        state.config.logoBase64 = base64
+        document.getElementById("logoImg").src = base64
+        document.getElementById("logoImg").style.display = "block"
+        document.getElementById("logoPlaceholder").style.display = "none"
+        document.getElementById("logoRemove").style.display = "flex"
+        autoSaveConfig(); updatePreview()
+    }
+}
+
+function removeLogo() {
+    state.config.logoBase64 = ""
+    document.getElementById("logoImg").style.display = "none"
+    document.getElementById("logoPlaceholder").style.display = "block"
+    document.getElementById("logoRemove").style.display = "none"
+    autoSaveConfig(); updatePreview()
+}
+
+function formatCnpj(input) {
+    let v = input.value.replace(/\D/g, "").slice(0, 14)
+    if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, "$1.$2.$3/$4-$5")
+    else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, "$1.$2.$3/$4")
+    else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, "$1.$2.$3")
+    else if (v.length > 2) v = v.replace(/^(\d{2})(\d{0,3})/, "$1.$2")
+    input.value = v
+}
+
+// ═══ FORM CONTROLS ═══
+function setConserv(type) {
+    state.conservacao = type
+    document.getElementById("btnRefri").className = "conserv-btn" + (type === "REFRIGERADO" ? " active-refri" : "")
+    document.getElementById("btnConge").className = "conserv-btn" + (type === "CONGELADO" ? " active-conge" : "")
+    // Update validity if product selected
+    const sel = document.getElementById("produtoSelect")
+    const idx = parseInt(sel.value)
+    if (!isNaN(idx) && state.products[idx]) {
+        const p = state.products[idx]
+        document.getElementById("validadeDias").value = type === "CONGELADO" ? p.congelDays : p.refrigDays
+    }
+    updatePreview()
+}
+
+function changeCopies(delta) {
+    state.copies = Math.max(1, Math.min(20, state.copies + delta))
+    document.getElementById("copiesVal").textContent = state.copies
+}
+
+function setSize(size) { state.labelSize = size; syncSizeToggle(); autoSaveConfig(); updatePreview() }
+function syncSizeToggle() {
+    document.getElementById("toggle60x40").className = "toggle-btn" + (state.labelSize === "60x40" ? " active" : "")
+    document.getElementById("toggle60x60").className = "toggle-btn" + (state.labelSize === "60x60" ? " active" : "")
+    document.getElementById("previewLabel").textContent = `Preview ${state.labelSize}mm`
+}
+function toggleHora() { state.showTime = !state.showTime; syncHoraToggle(); autoSaveConfig(); updatePreview() }
+function syncHoraToggle() { document.getElementById("toggleHora").className = "toggle-btn" + (state.showTime ? " active" : "") }
+
+// ═══ PREVIEW ═══
+function updatePreview() {
+    const nome = document.getElementById("nomeProduto").value || "NOME DO PRODUTO"
+    const qtd = document.getElementById("quantidade").value
+    const uni = document.getElementById("unidade").value
+    const lote = document.getElementById("lote").value
+    const resp = document.getElementById("responsavel").value || "___"
+    const dias = parseInt(document.getElementById("validadeDias").value) || 0
+    const empresa = document.getElementById("cfgNome").value
+    const cnpj = document.getElementById("cfgCnpj").value
+    const logo = state.config.logoBase64
+    const now = new Date(), val = new Date(now)
+    val.setDate(val.getDate() + dias)
+    const fmtDate = state.showTime ? formatDateTime : formatDateOnly
+    const manipStr = fmtDate(now), validStr = dias > 0 ? fmtDate(val) : "N/A"
+    const big = state.labelSize === "60x60", sz = big ? "big" : "small"
+    const icon = state.conservacao === "CONGELADO" ? "❄️" : "🌡️"
+    const conservLabel = state.conservacao === "CONGELADO" ? "CONGELADO" : "RESFRIADO"
+    const el = document.getElementById("etiqueta")
+    el.className = `etiqueta ${big ? "s60x60" : "s60x40"}`
+    let h = ""
+    h += `<div><div class="etq-nome ${sz}">${nome.toUpperCase()}</div>`
+    h += `<div class="etq-conserv ${sz}"><span><span class="icon">${icon}</span>${conservLabel}</span>`
+    h += qtd ? `<span>QTD: ${qtd} ${uni}</span>` : ""; h += `</div></div>`
+    h += `<div><div class="etq-sep"></div>`
+    h += `<div class="etq-row ${sz}"><span>Manipulação:</span><span class="val">${manipStr}</span></div>`
+    h += `<div class="etq-row ${sz}" style="margin-top:${big?6:2}px"><span>Validade:</span><span class="val" ${dias===0?'style="color:red"':''}>${validStr}</span></div>`
+    h += `<div class="etq-sep-thin"></div>`
+    h += `<div class="etq-resp ${sz}">Responsável: ${resp.toUpperCase()}</div>`
+    if (lote) h += `<div class="etq-lote ${sz}">Lote: ${lote}</div>`; h += `</div>`
+    h += `<div><div class="etq-sep"></div><div class="etq-footer"><div class="etq-footer-info ${sz}">`
+    if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
+    if (cnpj) h += `<div class="cnpj">CNPJ: ${cnpj}</div>`
+    h += `</div>`; 
+    if (logo) {
+        h += `<img src="${logo}" class="${sz}" />`
+    } else {
+        h += `<div style="font-family:var(--font-heading);font-weight:800;font-size:${big?20:15}px;letter-spacing:1px;align-self:flex-end;margin-bottom:2px">KAIRU<span style="font-weight:300;color:#666;font-size:${big?11:9}px;letter-spacing:3px;margin-left:3px">LABS</span></div>`
+    }
+    
+    // Branding FREE — mostra "Kairu Etiquetas" na etiqueta
+    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
+    if (!isPaid) {
+        h += `<div style="position:absolute; right:18px; bottom:8px; text-align:right; font-size:${big ? 8 : 6}px; color:#999; font-family:sans-serif; margin-top:2px">Gerado por Kairu</div>`
+    }
+    h += `</div></div>`
+    el.innerHTML = h
+}
+
+// ═══ PRINT / SAVE ═══
+function getData() {
+    const nome = document.getElementById("nomeProduto").value
+    if (!nome) { showToast("Selecione ou digite um produto", "error"); return null }
+    const resp = document.getElementById("responsavel").value
+    if (!resp) { showToast("Informe o responsável", "error"); return null }
+    const dias = parseInt(document.getElementById("validadeDias").value) || 0
+    if (dias <= 0) { showToast("Informe a validade em dias", "error"); return null }
+    const qtd = document.getElementById("quantidade").value
+    const uni = document.getElementById("unidade").value
+    const lote = document.getElementById("lote").value
+    const now = new Date(), val = new Date(now)
+    val.setDate(val.getDate() + dias)
+    const fmtDate = state.showTime ? formatDateTime : formatDateOnly
+    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
+    return {
+        nomeProduto: nome, conservacao: state.conservacao,
+        dataManipulacao: fmtDate(now), dataValidade: fmtDate(val),
+        quantidade: qtd ? `${qtd} ${uni}` : undefined,
+        lote: lote || undefined, responsavel: resp,
+        nomeRede: document.getElementById("cfgNome").value || undefined,
+        cnpj: document.getElementById("cfgCnpj").value || undefined,
+        isPaid: isPaid,
+    }
+}
+
+// Detectar se está rodando via web (celular/tablet) ou Electron
+const isWeb = !window.api
+
+async function handlePrint() {
+    const data = getData(); if (!data) return
+    const zpl = generateZPLMultiple(data, state.copies, state.labelSize)
+
+    if (window.api) {
+        // Electron: usa IPC
+        const printer = document.getElementById("cfgPrinter").value
+        if (!printer) { showToast("Selecione uma impressora em ⚙️ Configurações", "error"); return }
+        const result = await window.api.printZPL(zpl, printer)
+        if (result.success) showToast(`${state.copies} etiqueta${state.copies>1?"s":""} enviada${state.copies>1?"s":""}! ✅`, "success")
+        else showToast(`Erro: ${result.error}`, "error")
+    } else {
+        // Web: envia via API para o PC imprimir
+        try {
+            const res = await fetch("/api/print", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ zpl, printerName: state.config.printerName })
+            })
+            const result = await res.json()
+            if (result.success) showToast(`${state.copies} etiqueta${state.copies>1?"s":""} enviada${state.copies>1?"s":""}! ✅`, "success")
+            else showToast(`Erro: ${result.error}`, "error")
+        } catch (e) {
+            showToast("Erro de conexão com o PC", "error")
+        }
+    }
+}
+
+async function handleSaveFile() {
+    const data = getData(); if (!data) return
+    const zpl = generateZPLMultiple(data, state.copies, state.labelSize)
+    const filename = `etiqueta_${data.nomeProduto.replace(/\s+/g, "_")}.zpl`
+    if (window.api) {
+        const saved = await window.api.saveZPLFile(zpl, filename)
+        if (saved) showToast("Arquivo ZPL salvo! 💾", "success")
+    } else {
+        const blob = new Blob([zpl], { type: "text/plain" })
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob)
+        a.download = filename; a.click()
+        showToast("Arquivo ZPL baixado! 💾", "success")
+    }
+}
+
+function showToast(msg, type = "info") {
+    const el = document.getElementById("toast"); el.textContent = msg
+    el.className = `toast ${type} show`; setTimeout(() => el.className = "toast", 3000)
+}
+
+// Web mode: carregar config e produtos do PC via API
+async function initWeb() {
+    try {
+        const res = await fetch("/api/config")
+        const cfg = await res.json()
+        if (cfg) {
+            state.config = { ...state.config, ...cfg }
+            if (cfg.products) state.products = cfg.products
+            document.getElementById("cfgNome").value = cfg.nomeEmpresa || ""
+            document.getElementById("cfgCnpj").value = cfg.cnpj || ""
+            if (cfg.labelSize) { state.labelSize = cfg.labelSize; syncSizeToggle() }
+            if (cfg.showTime !== undefined) { state.showTime = cfg.showTime; syncHoraToggle() }
+            if (cfg.logoBase64) {
+                document.getElementById("logoImg").src = cfg.logoBase64
+                document.getElementById("logoImg").style.display = "block"
+                document.getElementById("logoPlaceholder").style.display = "none"
+            }
+        }
+        // Carregar impressoras
+        const pRes = await fetch("/api/printers")
+        state.printers = await pRes.json()
+        const select = document.getElementById("cfgPrinter")
+        select.innerHTML = '<option value="">Selecione...</option>'
+        state.printers.forEach(p => {
+            const opt = document.createElement("option")
+            opt.value = p.name
+            opt.textContent = p.displayName + (p.isDefault ? " ⭐" : "")
+            if (state.config.printerName && p.name === state.config.printerName) opt.selected = true
+            select.appendChild(opt)
+        })
+    } catch (e) { console.error("Erro ao conectar:", e) }
+    renderProducts()
+    syncProductSelect()
+    updatePreview()
+    updateNetworkInfo()
+}
+
+// ═══ KAIRU BANNER ═══
+function showKairuBanner() {
+    const banner = window.__kairuBanner
+    if (!banner) return
+    const el = document.getElementById("kairuBanner")
+    if (!el) return
+    el.style.display = "block"
+    el.style.background = banner.bgColor || "linear-gradient(135deg, #6366f1, #8b5cf6)"
+    el.style.color = banner.textColor || "#fff"
+    let html = banner.html || ""
+    if (banner.action && banner.action.label) {
+        html += ` <strong style="text-decoration:underline; cursor:pointer">${banner.action.label}</strong>`
+    }
+    html += `<button class="close-banner" onclick="event.stopPropagation(); document.getElementById('kairuBanner').style.display='none'">✕</button>`
+    el.innerHTML = html
+    if (banner.action && banner.action.url) {
+        el.onclick = () => {
+            if (window.api) {
+                require("electron").shell.openExternal(banner.action.url)
+            } else {
+                window.open(banner.action.url, "_blank")
+            }
+        }
+    }
+}
+
+// Tentar buscar banner via web também
+async function fetchBannerWeb() {
+    try {
+        const res = await fetch("/api/banner")
+        if (res.ok) {
+            const data = await res.json()
+            if (data && data.active) { window.__kairuBanner = data; showKairuBanner() }
+        }
+    } catch(e) {}
+}
+
+if (isWeb) { initWeb(); fetchBannerWeb() } else { init() }
+
+// ═══ THEME TOGGLE ═══
+function setTheme(mode) {
+    if (mode === "light") {
+        document.body.classList.add("light")
+    } else {
+        document.body.classList.remove("light")
+    }
+    document.getElementById("btnDark").className = "theme-btn" + (mode === "dark" ? " active" : "")
+    document.getElementById("btnLight").className = "theme-btn" + (mode === "light" ? " active" : "")
+    localStorage.setItem("kairu-theme", mode)
+    autoSaveConfig()
+}
+
+// Restaurar tema salvo
+(function() {
+    const saved = localStorage.getItem("kairu-theme")
+    if (saved === "light") setTheme("light")
+})()
+
+// ═══ QR CODE (na seção Rede Local) ═══
+function updateNetworkInfo() {
+    const el = document.getElementById("networkInfo")
+    if (!el) return
+    const ip = window.__localIP || "carregando..."
+    const port = window.__webPort || "3333"
+    const url = `http://${ip}:${port}/mobile.html`
+    el.innerHTML = `
+        <div style="margin-bottom:10px">
+            <strong style="color:var(--text)">📱 Celular / Tablet:</strong><br>
+            Acesse <span style="color:var(--accent); font-weight:700; font-family:var(--font-mono)">${url}</span>
+        </div>
+        <div style="text-align:center; margin-top:12px;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}&bgcolor=1A1A1A&color=FFFFFF&margin=8"
+                 alt="QR Code" style="border-radius:8px; border:1px solid var(--border);" width="140" height="140" />
+            <div style="font-size:10px; color:var(--text2); margin-top:4px;">Escaneie com a câmera do celular</div>
+        </div>
+    `
+}
+</script>
+<script src="onboarding.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+
+> kairu-etiquetas@1.0.0 start
+> electron .
+
+🌐 Servidor web rodando em http://192.168.1.82:3333
+📊 Telemetria offline (ok)

@@ -233,8 +233,13 @@ function showRegistrationModal() {
         };
 
         try {
-            if (window.electronAPI && window.electronAPI.saveRegistration) {
+            // Compatível com todos os apps: window.api (etiquetas/checklist/auditor) ou window.electronAPI (hub)
+            if (window.api && window.api.saveRegistration) {
+                await window.api.saveRegistration(data);
+            } else if (window.electronAPI && window.electronAPI.saveRegistration) {
                 await window.electronAPI.saveRegistration(data);
+            } else if (window.electronAPI && window.electronAPI.saveProfile) {
+                await window.electronAPI.saveProfile(data);
             }
         } catch (err) {
             console.error('Erro ao salvar registro:', err);

@@ -584,7 +584,7 @@
         </div>
         <div class="full">
             <label class="form-label">Responsável *</label>
-            <input type="text" class="form-input" id="responsavel" placeholder="Quem manipulou" oninput="updatePreview()">
+            <input type="text" class="form-input" id="responsavel" placeholder="Quem manipulou" oninput="updatePreview(); autoSaveConfig()">
         </div>
         <div class="full" id="validityBadge" style="display:none"></div>
     </div>
@@ -761,6 +761,7 @@ async function init() {
                 document.getElementById("logoPlaceholder").style.display = "none"
                 document.getElementById("logoRemove").style.display = "flex"
             }
+            if (cfg.responsavel) document.getElementById("responsavel").value = cfg.responsavel
         }
         await refreshPrinters()
     }
@@ -978,6 +979,7 @@ function autoSaveConfig() {
         state.config.labelSize = state.labelSize
         state.config.showTime = state.showTime
         state.config.products = state.products
+        state.config.responsavel = document.getElementById("responsavel").value
         state.config.theme = localStorage.getItem('kairu-theme') || 'dark'
         if (window.api) await window.api.saveConfig(state.config)
     }, 500)
@@ -1058,34 +1060,34 @@ function updatePreview() {
     const fmtDate = state.showTime ? formatDateTime : formatDateOnly
     const manipStr = fmtDate(now), validStr = dias > 0 ? fmtDate(val) : "N/A"
     const big = state.labelSize === "60x60", sz = big ? "big" : "small"
-    const icon = state.conservacao === "CONGELADO" ? "❄️" : "🌡️"
-    const conservLabel = state.conservacao === "CONGELADO" ? "CONGELADO" : "RESFRIADO"
+    const conservLabel = state.conservacao === "CONGELADO" ? "CONGELADO" : "REFRIGERADO"
     const el = document.getElementById("etiqueta")
     el.className = `etiqueta ${big ? "s60x60" : "s60x40"}`
+    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
+
+    // Preview fiel ao ZPL — sem emoji, mesma ordem
     let h = ""
     h += `<div><div class="etq-nome ${sz}">${nome.toUpperCase()}</div>`
-    h += `<div class="etq-conserv ${sz}"><span><span class="icon">${icon}</span>${conservLabel}</span>`
-    h += qtd ? `<span>QTD: ${qtd} ${uni}</span>` : ""; h += `</div></div>`
-    h += `<div><div class="etq-sep"></div>`
-    h += `<div class="etq-row ${sz}"><span>Manipulação:</span><span class="val">${manipStr}</span></div>`
-    h += `<div class="etq-row ${sz}" style="margin-top:${big?6:2}px"><span>Validade:</span><span class="val" ${dias===0?'style="color:red"':''}>${validStr}</span></div>`
     h += `<div class="etq-sep-thin"></div>`
-    h += `<div class="etq-resp ${sz}">Responsável: ${resp.toUpperCase()}</div>`
-    if (lote) h += `<div class="etq-lote ${sz}">Lote: ${lote}</div>`; h += `</div>`
+    h += `<div class="etq-conserv ${sz}"><span>${conservLabel}</span>`
+    h += qtd ? `<span>QTD: ${qtd} ${uni}</span>` : ""; h += `</div>`
+    h += `<div class="etq-sep-thin"></div>`
+    h += `<div class="etq-row ${sz}"><span>MANIPULACAO:</span><span class="val">${manipStr}</span></div>`
+    h += `<div class="etq-row ${sz}" style="margin-top:${big?4:2}px"><span>VALIDADE:</span><span class="val" ${dias===0?'style="color:red"':''}>${validStr}</span></div>`
+    h += `<div class="etq-sep-thin"></div>`
+    h += `<div class="etq-resp ${sz}">RESP.: ${resp.toUpperCase()}</div>`
+    if (lote) h += `<div class="etq-lote ${sz}">LOTE: ${lote}</div>`
+    h += `</div>`
+
+    // Rodapé fixo no fundo
     h += `<div><div class="etq-sep"></div><div class="etq-footer"><div class="etq-footer-info ${sz}">`
-    if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
     if (cnpj) h += `<div class="cnpj">CNPJ: ${cnpj}</div>`
-    h += `</div>`; 
-    if (logo) {
-        h += `<img src="${logo}" class="${sz}" />`
-    } else {
-        h += `<div style="font-family:var(--font-heading);font-weight:800;font-size:${big?20:15}px;letter-spacing:1px;align-self:flex-end;margin-bottom:2px">KAIRU<span style="font-weight:300;color:#666;font-size:${big?11:9}px;letter-spacing:3px;margin-left:3px">LABS</span></div>`
-    }
-    
-    // Branding FREE — mostra "Kairu Etiquetas" na etiqueta
-    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
+    if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
+    h += `</div>`
     if (!isPaid) {
-        h += `<div style="position:absolute; right:18px; bottom:8px; text-align:right; font-size:${big ? 8 : 6}px; color:#999; font-family:sans-serif; margin-top:2px">Gerado por Kairu</div>`
+        h += `<div style="font-family:var(--font-heading);font-weight:800;font-size:${big?18:14}px;letter-spacing:1px;align-self:flex-end;margin-bottom:2px">KAIRU<span style="font-weight:300;color:#666;font-size:${big?10:8}px;letter-spacing:3px;margin-left:3px">LABS</span></div>`
+    } else if (logo) {
+        h += `<img src="${logo}" class="${sz}" />`
     }
     h += `</div></div>`
     el.innerHTML = h

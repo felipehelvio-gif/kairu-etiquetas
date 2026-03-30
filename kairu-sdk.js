@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 //  KAIRU SDK — Módulo compartilhado para todos os apps Electron
-//  Telemetria · Heartbeat · Banner · Licença · Registro
+//  Telemetria · Heartbeat · Banner · Registro
 //  by Kairu Labs — "Inteligência que opera."
 // ═══════════════════════════════════════════════════════════════
 
@@ -8,6 +8,7 @@ const KAIRU_API = "https://portal.kairulabs.com.br/api"
 const fs = require("fs")
 const path = require("path")
 const os = require("os")
+const crypto = require("crypto")
 
 // ═══════════════════════════════════════════
 //  ID DE INSTALAÇÃO
@@ -17,6 +18,20 @@ function getInstallId(config) {
     if (config.installId) return config.installId
     config.installId = "KL-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 8)
     return config.installId
+}
+
+// ═══════════════════════════════════════════
+//  DEVICE ID (hash de hardware)
+// ═══════════════════════════════════════════
+
+function getDeviceId() {
+    try {
+        const raw = os.hostname() + os.platform() + os.arch() +
+                    JSON.stringify(os.cpus()[0]?.model || "") + os.totalmem()
+        return crypto.createHash("sha256").update(raw).digest("hex").substring(0, 16)
+    } catch (e) {
+        return "unknown"
+    }
 }
 
 // ═══════════════════════════════════════════
@@ -43,7 +58,6 @@ async function sendTelemetry(config, product = "kairu-etiquetas") {
                 showTime: config.showTime ?? true,
                 totalProdutos: (config.products || []).length,
                 printerConfigured: !!config.printerName,
-                // Campos de segmentação
                 cidade: config.cidade || null,
                 estado: config.estado || null,
                 tipoCozinha: config.tipoCozinha || null,
@@ -120,152 +134,6 @@ async function trackBanner(config, bannerId, type = "impression") {
 }
 
 // ═══════════════════════════════════════════
-//  LICENÇAS
-// ═══════════════════════════════════════════
-
-// Cache local da validação (funciona offline por 30 dias)
-function getLicenseCachePath(configDir) {
-    return path.join(configDir, "license-cache.json")
-}
-
-function loadLicenseCache(configDir) {
-    try {
-        const cachePath = getLicenseCachePath(configDir)
-        if (fs.existsSync(cachePath)) {
-            const cache = JSON.parse(fs.readFileSync(cachePath, "utf-8"))
-            const cacheDate = new Date(cache.cachedAt)
-            const now = new Date()
-            const diffDays = (now - cacheDate) / (1000 * 60 * 60 * 24)
-            if (diffDays <= 30) return cache // cache válido por 30 dias
-        }
-    } catch (e) {}
-    return null
-}
-
-function saveLicenseCache(configDir, data) {
-    try {
-        const cachePath = getLicenseCachePath(configDir)
-        fs.writeFileSync(cachePath, JSON.stringify({
-            ...data,
-            cachedAt: new Date().toISOString(),
-        }))
-    } catch (e) {}
-}
-
-async function validateLicense(config, product = "kairu-etiquetas", configDir) {
-    const key = config.licenseKey
-    if (!key) return { valid: false, reason: "no_key" }
-
-    // Tentar validar online
-    try {
-        const installId = getInstallId(config)
-        const res = await fetch(
-            `${KAIRU_API}/v1/license/validate?key=${encodeURIComponent(key)}&product=${product}&installId=${installId}`
-        )
-        const data = await res.json()
-
-        if (data.valid) {
-            // Cachear resultado
-            saveLicenseCache(configDir, { valid: true, key, product, ...data })
-        }
-
-        return data
-    } catch (e) {
-        // Offline: usar cache local
-        const cache = loadLicenseCache(configDir)
-        if (cache && cache.valid && cache.key === key) {
-            return { ...cache, fromCache: true }
-        }
-        return { valid: false, reason: "offline_no_cache" }
-    }
-}
-
-// Verificar se o app está em modo Pro (chave validada)
-function isPro(config, configDir) {
-    if (!config.licenseKey) return false
-    const cache = loadLicenseCache(configDir)
-    return cache?.valid && cache?.key === config.licenseKey
-}
-
-// ═══════════════════════════════════════════
-//  DEVICE ID (hash de hardware)
-// ═══════════════════════════════════════════
-
-const crypto = require("crypto")
-
-function getDeviceId() {
-    try {
-        const raw = os.hostname() + os.platform() + os.arch() +
-                    JSON.stringify(os.cpus()[0]?.model || "") + os.totalmem()
-        return crypto.createHash("sha256").update(raw).digest("hex").substring(0, 16)
-    } catch (e) {
-        return "unknown"
-    }
-}
-
-// ═══════════════════════════════════════════
-//  VERIFICAR TIER DO MEMBRO
-// ═══════════════════════════════════════════
-
-async function getMemberTier(config) {
-    try {
-        const installId = getInstallId(config)
-        const res = await fetch(`${KAIRU_API}/v1/members/me?installId=${encodeURIComponent(installId)}`)
-        if (!res.ok) return { tier: "beta", registered: false }
-        const data = await res.json()
-        if (data.registered) {
-            config._memberTier = data.tier
-            config._isFundador = data.isFundador
-            return data
-        }
-        return { tier: "beta", registered: false }
-    } catch (e) {
-        return { tier: config._memberTier || "beta", registered: false }
-    }
-}
-
-// ═══════════════════════════════════════════
-//  SPLASH AD (apenas Beta)
-// ═══════════════════════════════════════════
-
-async function showSplashAd(config, product = "kairu-etiquetas", win) {
-    try {
-        // Se já é Pro, não mostra
-        const memberInfo = await getMemberTier(config)
-        if (memberInfo.tier === "pro") return false
-
-        // Buscar banner tipo splash
-        const installId = getInstallId(config)
-        const res = await fetch(
-            `${KAIRU_API}/v1/banner?product=${product}&installId=${installId}&tier=${memberInfo.tier}`
-        )
-        if (!res.ok) return false
-        const banner = await res.json()
-        if (!banner.active) return false
-
-        // Injetar splash via IPC (o renderer vai mostrar)
-        if (win && win.webContents) {
-            win.webContents.executeJavaScript(`
-                (function(){
-                    var splash=document.createElement("div");
-                    splash.id="kairu-splash";
-                    splash.style.cssText="position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:${banner.bgColor || '#0A0A0A'};color:${banner.textColor || '#fff'};flex-direction:column;animation:fadeIn 0.3s ease";
-                    splash.innerHTML='<div style="max-width:400px;text-align:center;padding:32px">${banner.html.replace(/'/g, "\\'").replace(/\n/g, "")}</div><button id="splash-skip" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:6px;font-size:11px;cursor:pointer;opacity:0;transition:opacity 0.3s">Pular</button><p style="position:absolute;bottom:16px;font-size:9px;color:rgba(255,255,255,0.3)">Anúncio • Kairu Beta</p>';
-                    document.body.appendChild(splash);
-                    setTimeout(function(){document.getElementById("splash-skip").style.opacity="1"},2000);
-                    document.getElementById("splash-skip").onclick=function(){splash.style.opacity="0";setTimeout(function(){splash.remove()},300)};
-                    setTimeout(function(){if(document.getElementById("kairu-splash")){splash.style.opacity="0";setTimeout(function(){splash.remove()},300)}},6000);
-                })()
-            `)
-        }
-
-        return true
-    } catch (e) {
-        return false
-    }
-}
-
-// ═══════════════════════════════════════════
 //  PRÉ-CADASTRO
 // ═══════════════════════════════════════════
 
@@ -315,11 +183,6 @@ module.exports = {
     startHeartbeat,
     fetchBanner,
     trackBanner,
-    validateLicense,
-    isPro,
-    getMemberTier,
-    showSplashAd,
     sendRegistration,
     isFirstRun,
 }
-

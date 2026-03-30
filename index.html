@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kairu Etiquetas — by Kairu Labs</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <link href="assets/fonts/fonts.css" rel="stylesheet">
+    <script src="xlsx.full.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -375,8 +375,7 @@
 <body>
 
 <!-- Banner remoto Kairu Labs (controlado pelo servidor) -->
-<div class="kairu-banner" id="kairuBanner" style="display:block; background:linear-gradient(135deg, var(--accent), var(--accent-dark)); color:#fff; font-family:var(--font-heading);">
-    📢 Anuncio aqui
+<div class="kairu-banner" id="kairuBanner" style="display:none; background:linear-gradient(135deg, var(--accent), var(--accent-dark)); color:#fff; font-family:var(--font-heading);">
 </div>
 
 <header class="header">
@@ -491,32 +490,6 @@
         </div>
 
         <!-- Aparência -->
-        <div class="config-section" id="licenseSection">
-            <h3>🔑 Plano &amp; Licença</h3>
-            <div id="licenseStatus" style="margin-bottom:10px; padding:10px 14px; border-radius:12px; font-size:13px; font-weight:700; font-family:var(--font-heading); text-align:center"></div>
-            <div id="licensePlans" style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px">
-                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:11px">
-                    <span style="font-weight:800; color:var(--text)">FREE</span>
-                    <span style="color:var(--text2); flex:1">Banner · Cadastro manual</span>
-                    <span style="color:var(--success); font-weight:700">Grátis</span>
-                </div>
-                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--accent); background:var(--accent-bg); font-size:11px">
-                    <span style="font-weight:800; color:var(--accent)">PRO</span>
-                    <span style="color:var(--text2); flex:1">Sem ads · Import XLSX</span>
-                    <span style="color:var(--accent); font-weight:700">R$ 199,90</span>
-                </div>
-                <div style="display:flex; gap:4px; align-items:center; padding:8px 10px; border-radius:8px; border:1px solid var(--info); background:rgba(90,200,250,0.06); font-size:11px">
-                    <span style="font-weight:800; color:var(--info)">BUSINESS</span>
-                    <span style="color:var(--text2); flex:1">+ Matriz/Filial</span>
-                    <span style="color:var(--info); font-weight:700">R$ 497,00</span>
-                </div>
-            </div>
-            <div style="display:flex; gap:6px" id="licenseInputRow">
-                <input type="text" id="licenseKey" placeholder="KAIRU-XXXX-XXXX-XXXX" class="config-input" style="text-transform:uppercase; font-family:var(--font-mono); letter-spacing:1px; font-size:13px" oninput="formatLicenseKey(this)">
-                <button onclick="activateLicense()" style="padding:10px 16px; border-radius:10px; border:none; background:var(--accent); color:#fff; font-weight:700; cursor:pointer; font-family:var(--font-heading); font-size:12px; white-space:nowrap">Ativar</button>
-            </div>
-            <div style="font-size:10px; color:var(--text2); margin-top:6px">Licença vitalícia (v1.x) · Pagamento único · <a href="https://kairulabs.ai" target="_blank" style="color:var(--accent)">Comprar em kairulabs.ai</a></div>
-        </div>
         <div class="config-section">
             <h3>🎨 Aparência</h3>
             <div class="theme-toggle">
@@ -626,123 +599,8 @@ let state = {
     conservacao: "REFRIGERADO", copies: 1, labelSize: "60x60", showTime: true,
     printers: [], products: [], editingProductIdx: -1,
     config: { nomeEmpresa: "", cnpj: "", logoBase64: "", printerName: "" },
-    licenseTier: "free" // "free" | "pro" | "business"
 }
 let saveTimeout = null
-
-// ═══ LICENSE ═══
-function formatLicenseKey(el) {
-    let v = el.value.toUpperCase().replace(/[^A-Z0-9]/g, "")
-    if (v.length > 5 && !v.startsWith("KAIRU")) v = "KAIRU" + v.slice(5)
-    let parts = []
-    if (v.length > 0) parts.push(v.slice(0, 5))
-    if (v.length > 5) parts.push(v.slice(5, 9))
-    if (v.length > 9) parts.push(v.slice(9, 13))
-    if (v.length > 13) parts.push(v.slice(13, 17))
-    el.value = parts.join("-")
-}
-
-function validateLicenseKey(key) {
-    const clean = key.replace(/-/g, "").toUpperCase()
-    return clean.length === 17 && clean.startsWith("KAIRU")
-}
-
-function detectTierFromKey(key) {
-    // Prefixo da chave determina o tier
-    const seg = key.replace(/-/g, "").toUpperCase().slice(5, 7)
-    if (seg.startsWith("BZ") || seg.startsWith("BU")) return "business"
-    return "pro" // Padrão para chaves PRO
-}
-
-async function activateLicense() {
-    const key = document.getElementById("licenseKey").value.trim().toUpperCase()
-    if (!key || key.length < 19) {
-        showToast("Digite uma chave válida: KAIRU-XXXX-XXXX-XXXX", "error"); return
-    }
-    if (!validateLicenseKey(key)) {
-        showToast("Chave inválida", "error"); return
-    }
-    let tier = detectTierFromKey(key)
-    // Tentar validar via Portal API
-    try {
-        const r = await fetch("https://portal.kairulabs.ai/api/license/validate", {
-            method: "POST", headers: {"Content-Type":"application/json"},
-            body: JSON.stringify({ key, app: "etiquetas" })
-        })
-        if (r.ok) {
-            const data = await r.json()
-            if (!data.valid) { showToast("Chave não encontrada ou já usada", "error"); return }
-            if (data.tier) tier = data.tier
-        }
-    } catch(e) {
-        console.log("Portal offline, validação offline")
-    }
-    state.licenseTier = tier
-    state.config.licenseKey = key
-    state.config.licenseTier = tier
-    autoSaveConfig()
-    updateLicenseUI()
-    updateProFeatures()
-    const names = { pro: "PRO", business: "BUSINESS" }
-    showToast(`🎉 Licença ${names[tier]} ativada com sucesso!`, "success")
-}
-
-function updateLicenseUI() {
-    const el = document.getElementById("licenseStatus")
-    const inputRow = document.getElementById("licenseInputRow")
-    const plans = document.getElementById("licensePlans")
-    const tier = state.licenseTier
-    if (tier === "business") {
-        el.innerHTML = "✅ <strong>BUSINESS</strong> — Completo"
-        el.style.background = "rgba(90,200,250,0.1)"
-        el.style.color = "var(--info)"
-        el.style.border = "1px solid rgba(90,200,250,0.3)"
-        inputRow.style.display = "none"
-        plans.style.display = "none"
-    } else if (tier === "pro") {
-        el.innerHTML = "✅ <strong>PRO</strong> — Sem anúncios + XLSX"
-        el.style.background = "rgba(52,199,89,0.1)"
-        el.style.color = "var(--success)"
-        el.style.border = "1px solid rgba(52,199,89,0.3)"
-        inputRow.style.display = "none"
-        plans.style.display = "none"
-    } else {
-        el.innerHTML = "📦 <strong>FREE</strong> — Versão gratuita"
-        el.style.background = "rgba(255,107,43,0.06)"
-        el.style.color = "var(--text2)"
-        el.style.border = "1px solid var(--border)"
-        inputRow.style.display = "flex"
-        plans.style.display = "flex"
-    }
-}
-
-function updateProFeatures() {
-    const tier = state.licenseTier
-    const isPaid = tier === "pro" || tier === "business"
-    // Banner: esconder se pago
-    const banner = document.getElementById("kairuBanner")
-    if (banner) banner.style.display = isPaid ? "none" : "block"
-    // XLSX: lock/unlock
-    const xlsxBtn = document.getElementById("xlsxImportBtn")
-    if (xlsxBtn) {
-        if (isPaid) {
-            xlsxBtn.style.opacity = "1"
-            xlsxBtn.style.pointerEvents = "auto"
-            xlsxBtn.innerHTML = "📥 Importar XLSX"
-            xlsxBtn.style.borderColor = "var(--accent)"
-            xlsxBtn.style.color = "var(--accent)"
-        } else {
-            xlsxBtn.style.opacity = "0.5"
-            xlsxBtn.style.pointerEvents = "none"
-            xlsxBtn.innerHTML = "🔒 Pro"
-            xlsxBtn.style.borderColor = "var(--border)"
-            xlsxBtn.style.color = "var(--text2)"
-        }
-    }
-    // Ad sidebar: esconder se pago
-    const sidebarAd = document.getElementById("sidebarAd")
-    if (sidebarAd) sidebarAd.style.display = isPaid ? "none" : "flex"
-}
 
 // ═══ INIT ═══
 async function init() {
@@ -768,13 +626,6 @@ async function init() {
     renderProducts()
     syncProductSelect()
     updatePreview()
-    // Restaurar licença
-    if (state.config.licenseKey) {
-        state.licenseTier = state.config.licenseTier || "pro"
-        document.getElementById("licenseKey").value = state.config.licenseKey
-    }
-    updateLicenseUI()
-    updateProFeatures()
 }
 
 // ═══ TABS ═══
@@ -1063,7 +914,6 @@ function updatePreview() {
     const conservLabel = state.conservacao === "CONGELADO" ? "CONGELADO" : "REFRIGERADO"
     const el = document.getElementById("etiqueta")
     el.className = `etiqueta ${big ? "s60x60" : "s60x40"}`
-    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
 
     // Preview fiel ao ZPL — sem emoji, mesma ordem
     let h = ""
@@ -1084,9 +934,7 @@ function updatePreview() {
     if (cnpj) h += `<div class="cnpj">CNPJ: ${cnpj}</div>`
     if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
     h += `</div>`
-    if (!isPaid) {
-        h += `<div style="font-family:var(--font-heading);font-weight:800;font-size:${big?18:14}px;letter-spacing:1px;align-self:flex-end;margin-bottom:2px">KAIRU<span style="font-weight:300;color:#666;font-size:${big?10:8}px;letter-spacing:3px;margin-left:3px">LABS</span></div>`
-    } else if (logo) {
+    if (logo) {
         h += `<img src="${logo}" class="${sz}" />`
     }
     h += `</div></div>`
@@ -1107,7 +955,6 @@ function getData() {
     const now = new Date(), val = new Date(now)
     val.setDate(val.getDate() + dias)
     const fmtDate = state.showTime ? formatDateTime : formatDateOnly
-    const isPaid = state.licenseTier === "pro" || state.licenseTier === "business"
     return {
         nomeProduto: nome, conservacao: state.conservacao,
         dataManipulacao: fmtDate(now), dataValidade: fmtDate(val),
@@ -1115,7 +962,6 @@ function getData() {
         lote: lote || undefined, responsavel: resp,
         nomeRede: document.getElementById("cfgNome").value || undefined,
         cnpj: document.getElementById("cfgCnpj").value || undefined,
-        isPaid: isPaid,
     }
 }
 
@@ -1224,8 +1070,8 @@ function showKairuBanner() {
     el.innerHTML = html
     if (banner.action && banner.action.url) {
         el.onclick = () => {
-            if (window.api) {
-                require("electron").shell.openExternal(banner.action.url)
+            if (window.api && window.api.openExternal) {
+                window.api.openExternal(banner.action.url)
             } else {
                 window.open(banner.action.url, "_blank")
             }
@@ -1266,24 +1112,49 @@ function setTheme(mode) {
 })()
 
 // ═══ QR CODE (na seção Rede Local) ═══
-function updateNetworkInfo() {
+async function updateNetworkInfo() {
     const el = document.getElementById("networkInfo")
     if (!el) return
-    const ip = window.__localIP || "carregando..."
-    const port = window.__webPort || "3333"
+
+    let ip = window.__localIP
+    let port = window.__webPort || 3333
+
+    // Se variáveis não foram injetadas, buscar via IPC
+    if (!ip && window.api && window.api.getNetworkInfo) {
+        try {
+            const info = await window.api.getNetworkInfo()
+            ip = info.ip
+            port = info.port
+            window.__localIP = ip
+            window.__webPort = port
+        } catch (e) {
+            console.error("Erro ao buscar network info:", e)
+        }
+    }
+
+    if (!ip) {
+        el.innerHTML = `<div style="color:var(--text3)">⚠️ Não foi possível detectar o IP da rede local</div>`
+        return
+    }
+
     const url = `http://${ip}:${port}/mobile.html`
+    const qrSrc = `http://localhost:${port}/api/qrcode?data=${encodeURIComponent(url)}`
     el.innerHTML = `
         <div style="margin-bottom:10px">
             <strong style="color:var(--text)">📱 Celular / Tablet:</strong><br>
             Acesse <span style="color:var(--accent); font-weight:700; font-family:var(--font-mono)">${url}</span>
         </div>
         <div style="text-align:center; margin-top:12px;">
-            <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(url)}&bgcolor=1A1A1A&color=FFFFFF&margin=8"
-                 alt="QR Code" style="border-radius:8px; border:1px solid var(--border);" width="140" height="140" />
+            <img src="${qrSrc}"
+                 alt="QR Code" style="border-radius:8px; border:1px solid var(--border);" width="140" height="140"
+                 onerror="this.style.display='none'" />
             <div style="font-size:10px; color:var(--text2); margin-top:4px;">Escaneie com a câmera do celular</div>
         </div>
     `
 }
+
+// Auto-carregar após 2s como fallback (caso did-finish-load não dispare)
+setTimeout(() => { updateNetworkInfo() }, 2000)
 </script>
 <script src="onboarding.js"></script>
 </body>

@@ -16,13 +16,12 @@ contextBridge.exposeInMainWorld("api", {
     // Rede
     getNetworkInfo: () => ipcRenderer.invoke("get-network-info"),
 
-    // Licença
-    validateLicense: (key) => ipcRenderer.invoke("validate-license", key),
-    checkProStatus: () => ipcRenderer.invoke("check-pro-status"),
-
     // Pré-cadastro
     saveRegistration: (data) => ipcRenderer.invoke("save-registration", data),
 
     // Banner tracking
     trackBanner: (bannerId, type) => ipcRenderer.invoke("track-banner", bannerId, type),
+
+    // Abrir link externo
+    openExternal: (url) => ipcRenderer.invoke("open-external", url),
 })

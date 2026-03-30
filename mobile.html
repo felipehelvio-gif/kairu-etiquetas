@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Kairu Etiquetas</title>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <link href="assets/fonts/fonts.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         button, select, input { touch-action: manipulation; }
@@ -23,7 +23,7 @@
         /* Banner */
         .banner { width: 100%; padding: 20px 40px 20px 16px; font-size: 14px; font-weight: 600;
             text-align: center; font-family: var(--font-heading); position: relative;
-            background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; }
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; display: none; }
         .banner .close { position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
             background: rgba(0,0,0,0.2); border: none; color: #fff;
             width: 22px; height: 22px; border-radius: 50%; cursor: pointer; font-size: 11px; }
@@ -169,9 +169,8 @@
 </head>
 <body>
 
-<div class="banner" id="kairuBanner">
-    📢 Anuncio aqui
-</div>
+<!-- Banner remoto (oculto por padrão, controlado pelo servidor) -->
+<div class="banner" id="kairuBanner"></div>
 
 <header class="header">
     <div class="header-left">
@@ -273,13 +272,20 @@ async function init() {
         document.getElementById("printerName").textContent = ok ? S.printerName.substring(0, 18) : "Sem impressora"
         document.getElementById("eEmpresa").textContent = cfg.nomeEmpresa || ""
         document.getElementById("eCnpj").textContent = cfg.cnpj ? `CNPJ: ${cfg.cnpj}` : ""
+        // Buscar banner remoto
         try {
             const b = await (await fetch("/api/banner")).json()
             if (b && b.active) {
                 const el = document.getElementById("kairuBanner")
+                el.style.display = "block"
                 el.style.background = b.bgColor || ""
                 el.style.color = b.textColor || "#fff"
-                el.innerHTML = (b.html || "")
+                let html = b.html || ""
+                html += `<button class="close" onclick="event.stopPropagation(); this.parentElement.style.display='none'">✕</button>`
+                el.innerHTML = html
+                if (b.actionUrl) {
+                    el.onclick = () => window.open(b.actionUrl, "_blank")
+                }
             }
         } catch(e) {}
     } catch(e) {
@@ -365,33 +371,25 @@ function updatePreview() {
     const days = p ? (S.conserv === "C" ? p.congelDays : p.refrigDays) || 3 : 3
     const now = new Date(), val = new Date(now.getTime() + days * 86400000)
     const big = S.size === "60x60", sz = big ? "big" : "small"
-    const icon = S.conserv === "C" ? "❄️" : "🌡️"
-    const conservLabel = S.conserv === "C" ? "CONGELADO" : "RESFRIADO"
+    const conservLabel = S.conserv === "C" ? "CONGELADO" : "REFRIGERADO"
     const el = document.getElementById("etiqueta")
     el.className = `etiqueta ${big ? "s60x60" : "s60x40"}`
     let h = ""
     h += `<div><div class="etq-nome ${sz}">${nome.toUpperCase()}</div>`
-    h += `<div class="etq-conserv ${sz}"><span><span class="icon">${icon}</span>${conservLabel}</span>`
+    h += `<div class="etq-sep-thin"></div>`
+    h += `<div class="etq-conserv ${sz}"><span>${conservLabel}</span>`
     h += qtd ? `<span>QTD: ${qtd} ${uni}</span>` : ""; h += `</div></div>`
     h += `<div><div class="etq-sep"></div>`
-    h += `<div class="etq-row ${sz}"><span>Manipulação:</span><span class="val">${fmt(now)}</span></div>`
-    h += `<div class="etq-row ${sz}" style="margin-top:${big?6:2}px"><span>Validade:</span><span class="val">${fmt(val)}</span></div>`
+    h += `<div class="etq-row ${sz}"><span>MANIPULACAO:</span><span class="val">${fmt(now)}</span></div>`
+    h += `<div class="etq-row ${sz}" style="margin-top:${big?6:2}px"><span>VALIDADE:</span><span class="val">${fmt(val)}</span></div>`
     h += `<div class="etq-sep-thin"></div>`
-    if (resp) h += `<div class="etq-resp ${sz}">Responsável: ${resp.toUpperCase()}</div>`
-    if (lote) h += `<div class="etq-lote ${sz}">Lote: ${lote}</div>`
+    if (resp) h += `<div class="etq-resp ${sz}">RESP.: ${resp.toUpperCase()}</div>`
+    if (lote) h += `<div class="etq-lote ${sz}">LOTE: ${lote}</div>`
     h += `</div>`
-    h += `<div><div class="etq-sep"></div><div class="etq-footer" style="padding-bottom:12px"><div class="etq-footer-info ${sz}">`
-    if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
+    h += `<div><div class="etq-sep"></div><div class="etq-footer"><div class="etq-footer-info ${sz}">`
     if (cnpj) h += `<div class="cnpj">CNPJ: ${cnpj}</div>`
-    h += `</div>`
-    // Kairu LABS footer
-    h += `<div style="font-family:var(--font-heading);font-weight:800;font-size:${big?20:15}px;letter-spacing:1px;align-self:flex-end;margin-bottom:2px">KAIRU<span style="font-weight:300;color:#666;font-size:${big?11:9}px;letter-spacing:3px;margin-left:3px">LABS</span></div>`
-    h += `</div></div>`
-    // Branding FREE
-    if (!(S.config.licenseTier === "pro" || S.config.licenseTier === "business")) {
-        h += `<div style="position:absolute; right:18px; bottom:8px; text-align:right; font-size:${big ? 8 : 6}px; color:#999; font-family:sans-serif; margin-top:2px">Gerado por Kairu</div>`
-    }
-    h += `</div>`
+    if (empresa) h += `<div class="empresa">${empresa.toUpperCase()}</div>`
+    h += `</div></div></div>`
     el.innerHTML = h
 }
 
@@ -406,27 +404,40 @@ function toggleOpt() {
     el.classList.toggle("show", sh)
 }
 
+function sanitizeZPL(text) {
+    return text
+        .replace(/\^/g, "").replace(/~/g, "")
+        .replace(/[àáâãä]/g, "a").replace(/[éêèë]/g, "e")
+        .replace(/[íìïî]/g, "i").replace(/[óôõòö]/g, "o")
+        .replace(/[úùüû]/g, "u").replace(/[ç]/g, "c")
+        .replace(/[ÀÁÂÃÄ]/g, "A").replace(/[ÉÊÈË]/g, "E")
+        .replace(/[ÍÌÏÎ]/g, "I").replace(/[ÓÔÕÒÖ]/g, "O")
+        .replace(/[ÚÙÜÛ]/g, "U").replace(/[Ç]/g, "C")
+}
+
 function generateZPL(data) {
     const w = 480, h = data.labelSize === "60x60" ? 480 : 320
-    let z = `^XA^PW${w}^LL${h}^CI28^CF0,28\n`
-    z += `^FO20,20^A0N,36,36^FD${(data.nomeProduto||"").toUpperCase()}^FS\n`
-    z += `^FO20,60^A0N,22,22^FD${data.conservacao==="C"?"CONGELADO":"RESFRIADO"}^FS\n`
-    if (data.quantidade) z += `^FO${w-160},60^A0N,22,22^FDQTD: ${data.quantidade}^FS\n`
-    z += `^FO20,90^GB${w-40},2,2^FS\n`; let y = 100
-    if (data.dataManipulacao) { z += `^FO20,${y}^A0N,22,22^FDManipulacao: ${data.dataManipulacao}^FS\n`; y += 28 }
-    if (data.dataValidade) { z += `^FO20,${y}^A0N,22,22^FDValidade: ${data.dataValidade}^FS\n`; y += 28 }
-    z += `^FO20,${y}^GB${w-40},2,2^FS\n`; y += 10
-    if (data.responsavel) { z += `^FO20,${y}^A0N,20,20^FDResp: ${data.responsavel}^FS\n`; y += 26 }
-    if (data.lote) { z += `^FO20,${y}^A0N,18,18^FDLote: ${data.lote}^FS\n`; y += 24 }
-    if (data.nomeRede) z += `^FO20,${h-40}^A0N,16,16^FD${data.nomeRede}^FS\n`
-    if (data.cnpj) z += `^FO20,${h-20}^A0N,14,14^FDCNPJ: ${data.cnpj}^FS\n`
-    
-    // Kairu Labs Footer na etiqueta
-    if (!data.isPaid) {
-        z += `^FO${w-160},${h-20}^A0N,18,18^FDKAIRU LABS^FS\n`
-    }
-    
-    z += `^XZ\n`; return z
+    const nome = sanitizeZPL((data.nomeProduto || "").toUpperCase())
+    const conservacao = data.conservacao === "C" ? "CONGELADO" : "REFRIGERADO"
+    let z = `^XA\n^PR3,3,3\n~SD25\n^PW${w}\n^LL${h}\n^LT0\n^LS0\n^LH10,8\n`
+    z += `^CF0,36\n^FO0,8^FD${nome}^FS\n^FO0,48^GB${w-50},2,2^FS\n`
+    z += "^CF0,22\n"
+    z += `^FO0,80^FD${conservacao}^FS\n`
+    if (data.quantidade) z += `^FO260,80^FDQTD: ${sanitizeZPL(data.quantidade)}^FS\n`
+    z += `^FO0,106^GB${w-50},1,1^FS\n`
+    z += "^CF0,24\n"
+    z += `^FO0,116^FDMANIPULACAO:^FS\n^FO210,116^FD${data.dataManipulacao}^FS\n`
+    z += `^FO0,148^FDVALIDADE:^FS\n^FO210,148^FD${data.dataValidade}^FS\n`
+    z += `^FO0,178^GB${w-50},1,1^FS\n`
+    if (data.responsavel) z += `^CF0,28\n^FO0,188^FDRESP.: ${sanitizeZPL(data.responsavel).toUpperCase()}^FS\n`
+    if (data.lote) z += `^CF0,20\n^FO0,222^FDLOTE: ${sanitizeZPL(data.lote)}^FS\n`
+    z += `^FO0,250^GB${w-50},3,3^FS\n`
+    z += "^CF0,16\n"
+    let fY = 260
+    if (data.cnpj) { z += `^FO0,${fY}^FDCNPJ: ${data.cnpj}^FS\n`; fY += 20 }
+    if (data.nomeRede) { z += `^FO0,${fY}^FD${sanitizeZPL(data.nomeRede).toUpperCase()}^FS\n` }
+    z += `^XZ\n`
+    return z
 }
 
 async function handlePrint() {
@@ -438,7 +449,6 @@ async function handlePrint() {
     const days = p ? (S.conserv === "C" ? p.congelDays : p.refrigDays) || 3 : 3
     const val = new Date(now.getTime() + days * 86400000)
     const qtd = document.getElementById("quantidade").value; const uni = document.getElementById("unidade").value
-    const isPaid = S.config.licenseTier === "pro" || S.config.licenseTier === "business"
     const data = {
         nomeProduto: name, conservacao: S.conserv,
         dataManipulacao: fmt(now), dataValidade: fmt(val),
@@ -446,7 +456,7 @@ async function handlePrint() {
         responsavel: document.getElementById("responsavel").value || undefined,
         lote: document.getElementById("lote").value || undefined,
         nomeRede: S.config.nomeEmpresa || undefined, cnpj: S.config.cnpj || undefined,
-        labelSize: S.size, isPaid: isPaid,
+        labelSize: S.size,
     }
     let zpl = ""; for (let i = 0; i < S.copies; i++) zpl += generateZPL(data)
     const btn = document.getElementById("printBtn"); btn.disabled = true; btn.textContent = "Enviando..."

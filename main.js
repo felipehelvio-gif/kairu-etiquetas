@@ -4,6 +4,7 @@ const fs = require("fs")
 const { execFile, exec } = require("child_process")
 const os = require("os")
 const express = require("express")
+const QRCode = require("qrcode")
 const kairu = require("./kairu-sdk")
 
 const configPath = path.join(app.getPath("userData"), "config.json")
@@ -19,8 +20,8 @@ function loadConfig() {
         // Pré-cadastro
         cidade: "", estado: "", tipoCozinha: "", email: "", telefone: "",
         termosAceitos: false,
-        // Licença
-        licenseKey: "",
+        // Banner cache (offline)
+        cachedBanner: null,
     }
 }
 
@@ -125,7 +126,29 @@ function startWebServer() {
     webApp.get("/api/banner", async (req, res) => {
         const config = loadConfig()
         const banner = await kairu.fetchBanner(config, "kairu-etiquetas")
-        res.json(banner || { active: false })
+        if (banner) {
+            // Cachear banner para uso offline
+            config.cachedBanner = banner
+            saveConfig(config)
+            res.json(banner)
+        } else {
+            // Sem internet: usar banner cacheado
+            res.json(config.cachedBanner || { active: false })
+        }
+    })
+
+    // QR Code local (offline-first)
+    webApp.get("/api/qrcode", async (req, res) => {
+        const data = req.query.data || ""
+        try {
+            const png = await QRCode.toBuffer(data, {
+                width: 200, margin: 1,
+                color: { dark: "#FFFFFF", light: "#1A1A1A" }
+            })
+            res.type("image/png").send(png)
+        } catch (e) {
+            res.status(500).json({ error: e.message })
+        }
     })
 
     webApp.listen(WEB_PORT, "0.0.0.0", () => {
@@ -143,6 +166,8 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1100, height: 800, minWidth: 900, minHeight: 700,
         title: "Kairu Etiquetas",
+        center: true,
+        show: true,
         icon: path.join(__dirname, "assets", "icon.png"),
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -150,6 +175,8 @@ function createWindow() {
         },
     })
     mainWindow.loadFile("index.html")
+    mainWindow.show()
+    mainWindow.focus()
     if (process.argv.includes("--dev")) mainWindow.webContents.openDevTools()
 }
 
@@ -164,12 +191,14 @@ app.whenReady().then(async () => {
     kairu.sendTelemetry(config, "kairu-etiquetas")
     kairu.startHeartbeat(config, "kairu-etiquetas")
 
-    // Buscar banner remoto
-    const banner = await kairu.fetchBanner(config, "kairu-etiquetas")
-
-    // Verificar se é Pro (chave validada)
-    const configDir = app.getPath("userData")
-    const proStatus = kairu.isPro(config, configDir)
+    // Buscar banner remoto (com cache offline)
+    const config2 = loadConfig()
+    const banner = await kairu.fetchBanner(config2, "kairu-etiquetas")
+    if (banner) {
+        config2.cachedBanner = banner
+        saveConfig(config2)
+    }
+    const activeBanner = banner || config2.cachedBanner
 
     // Verificar primeiro uso
     const firstRun = kairu.isFirstRun(config)
@@ -179,11 +208,10 @@ app.whenReady().then(async () => {
             window.__localIP = "${localIP}";
             window.__webPort = ${WEB_PORT};
             window.__installId = "${config.installId || ''}";
-            window.__isPro = ${proStatus};
             window.__isFirstRun = ${firstRun};
-            ${banner ? `window.__kairuBanner = ${JSON.stringify(banner)};` : ''}
+            ${activeBanner ? `window.__kairuBanner = ${JSON.stringify(activeBanner)};` : ''}
             if (typeof updateNetworkInfo === "function") updateNetworkInfo();
-            if (typeof showKairuBanner === "function" && !${proStatus}) showKairuBanner();
+            if (typeof showKairuBanner === "function") showKairuBanner();
             if (${firstRun} && typeof showRegistrationModal === "function") showRegistrationModal();
         `)
     })
@@ -236,20 +264,12 @@ ipcMain.handle("get-network-info", () => {
     return { ip: getLocalIP(), port: WEB_PORT }
 })
 
-// ─── Novos IPC Handlers (Licença + Registro) ───
+// ─── IPC Handlers (Registro + Extras) ───
 
-ipcMain.handle("validate-license", async (_event, key) => {
-    const config = loadConfig()
-    config.licenseKey = key
-    saveConfig(config)
-    const configDir = app.getPath("userData")
-    return kairu.validateLicense(config, "kairu-etiquetas", configDir)
-})
-
-ipcMain.handle("check-pro-status", () => {
-    const config = loadConfig()
-    const configDir = app.getPath("userData")
-    return kairu.isPro(config, configDir)
+ipcMain.handle("open-external", async (_event, url) => {
+    const { shell } = require("electron")
+    await shell.openExternal(url)
+    return true
 })
 
 ipcMain.handle("save-registration", async (_event, regData) => {

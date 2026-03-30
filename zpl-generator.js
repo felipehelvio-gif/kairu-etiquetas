@@ -69,10 +69,6 @@ function generateZPL_60x60(data) {
     let fY = yFooter + 12
     if (data.cnpj) { z += `^FO0,${fY}^FDCNPJ: ${data.cnpj}^FS\n`; fY += 22 }
     if (data.nomeRede) { z += `^FO0,${fY}^FD${sanitizeZPL(data.nomeRede).toUpperCase()}^FS\n` }
-    if (!data.isPaid) {
-        z += "^CF0,18\n"
-        z += `^FO280,${fY+2}^FDKAIRU LABS^FS\n`
-    }
     z += "^XZ\n"
     return z
 }
@@ -97,10 +93,7 @@ function generateZPL_60x40(data) {
     z += "^CF0,16\n"
     let fY = 260
     if (data.cnpj) { z += `^FO0,${fY}^FDCNPJ: ${data.cnpj}^FS\n`; fY += 20 }
-    if (!data.isPaid) {
-        z += "^CF0,16\n"
-        z += `^FO290,${fY+2}^FDKAIRU LABS^FS\n`
-    }
+    if (data.nomeRede) { z += `^FO0,${fY}^FD${sanitizeZPL(data.nomeRede).toUpperCase()}^FS\n` }
     z += "^XZ\n"
     return z
 }

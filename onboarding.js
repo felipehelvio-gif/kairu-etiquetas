@@ -65,7 +65,7 @@ function showRegistrationModal() {
                 <div class="k-row">
                     <div class="k-field">
                         <label class="k-required">Seu nome</label>
-                        <input type="text" id="k-nome" placeholder="Ex: Felipe Severina" required>
+                        <input type="text" id="k-nome" placeholder="Ex: João Silva" required>
                     </div>
                     <div class="k-field">
                         <label class="k-required">Seu cargo</label>
@@ -91,7 +91,7 @@ function showRegistrationModal() {
 
                 <div class="k-field">
                     <label class="k-required">Nome do estabelecimento</label>
-                    <input type="text" id="k-empresa" placeholder="Ex: Restaurante da Severina" required>
+                    <input type="text" id="k-empresa" placeholder="Ex: Restaurante Sabor Caseiro" required>
                 </div>
 
                 <div class="k-row">

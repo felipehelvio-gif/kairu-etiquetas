@@ -25,7 +25,9 @@
       "index.html",
       "mobile.html",
       "zpl-generator.js",
-      "kairu.js",
+      "kairu-sdk.js",
+      "onboarding.js",
+      "xlsx.full.min.js",
       "assets/**"
     ],
     "win": {
@@ -62,6 +64,7 @@
     "electron-builder": "^26.8.1"
   },
   "dependencies": {
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "qrcode": "^1.5.4"
   }
 }
